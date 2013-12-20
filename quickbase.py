@@ -146,6 +146,10 @@ class Connection(object):
                 'num_recs_updated': int(results.find('num_recs_updated').text),
                 'records': [(int(record.text), record.attrs['update_id']) for record in results.find_all('rid')]}
 
+    def download(self, dbid, rid, fid, vid="0"):
+        url = '%sup/%s/a/r%s/e24/v0?apptoken=%s&ticket=%s' % (self.url, dbid, rid, fid, vid, self.apptoken, self.ticket)
+        return urllib2.urlopen(url)
+
 class QuickBaseRecord(object):
     """Simple dict-like object which may be accessed as
     INSTANCE['record_id_'] or as INSTANCE.record_id_.  Implements
