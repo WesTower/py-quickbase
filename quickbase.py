@@ -147,7 +147,7 @@ class Connection(object):
                 'records': [(int(record.text), record.attrs['update_id']) for record in results.find_all('rid')]}
 
     def download(self, dbid, rid, fid, vid="0"):
-        url = '%sup/%s/a/r%s/e24/v0?apptoken=%s&ticket=%s' % (self.url, dbid, rid, fid, vid, self.apptoken, self.ticket)
+        url = '%sup/%s/a/r%s/e24/v%s?apptoken=%s&ticket=%s' % (self.url, dbid, rid, fid, vid, self.apptoken, self.ticket)
         return urllib2.urlopen(url)
 
 class QuickBaseRecord(object):
