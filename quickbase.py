@@ -6,6 +6,7 @@ A Pythonic interface to the QuickBase API.
 
 import logging
 import urllib2
+import json
 
 from bs4 import BeautifulSoup
 from xml.dom import minidom
@@ -84,7 +85,7 @@ class Connection(object):
         is an integer then it is a QuickBase field ID; if it is a
         string then it is a field name."""
         if not (isinstance(record, QuickBaseRecord) or isinstance(record, dict)):
-            raise Exception("record must be a QuickBaseRecord or dictionary")
+            raise QuickBaseRecordException("record must be a QuickBaseRecord or dictionary")
         params = {'ticket': self.ticket}
         if self.apptoken:
             params['apptoken'] = self.apptoken
@@ -176,15 +177,35 @@ class QuickBaseRecord(object):
     def __contains__(self, x):
         return x in self._fields
 
+    def keys(self):
+        return self._fields.keys()
 
-class QuickBaseException(BaseException):
+    def diff(self, record):
+        if not (isinstance(record, QuickBaseRecord) or isinstance(record, dict)):
+            raise QuickBaseRecordException('compare record must be a dict')
+        diffs = {}
+        for key in record.keys():
+            if key not in self._fields.keys():
+                raise QuickBaseRecordException('compare contains key not found in initial QuickBaseRecord: "%s"' % key, self)
+            else:
+                if record[key] != self._fields[key]:
+                    diffs[key] = (self._fields[key], record[key])
+        return diffs
+            
+class QuickBaseException(Exception):
     def __init__(self, response):
+        Exception.__init__(self, str(response))
         self.response = response
-        return
+   
+class QuickBaseRecordException(Exception):
+    def __init__(self, message, record=None):
+        Exception.__init__(self, message)
+        self.record = record
 
     def __str__(self):
-        return str(self.response)
-
+        if self.record:
+            self.message += '\n'+json.dumps(self.record._fields)
+        return self.message
 
 def connect(url, username, password, apptoken=None, hours=4):
     """Connect to the QuickBase instance at URL (FIXME: of the form
