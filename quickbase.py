@@ -135,7 +135,50 @@ class Connection(object):
         return result.find('import_status').text
 
     def import_from_csv(self, dbid, csv_file, clist, encoding='utf-8', skipfirst=True, raw=False):
-        records_csv = ''.join(csv_file.readlines()).decode(encoding)
+        num_recs_added = 0
+        num_recs_input = 0
+        num_recs_updated = 0
+        records = []
+    
+        csv_header = ""    
+        csv_list = []
+        index = 0
+        max_row_count = 1000
+    
+        for row in csv_file:
+            if not csv_header:
+                csv_header = row
+                csv_list.append( csv_header )
+            else:
+                index += 1
+                csv_list.append( row )
+                if index == max_row_count:
+                    print "records to import: " + str(len(csv_list))
+                    results = self.import_from_list(dbid, csv_list, clist, encoding, skipfirst, raw)
+                    num_recs_added += results['num_recs_added']
+                    num_recs_input += results['num_recs_input']
+                    num_recs_updated += results['num_recs_updated']
+                    records += results['records']
+
+                    index = 0
+                    csv_list = []
+                    csv_list.append( csv_header )
+
+        if index > 0:
+            print "records to import: " + str(len(csv_list))
+            results = self.import_from_list(dbid, csv_list, clist, encoding, skipfirst, raw)
+            num_recs_added += results['num_recs_added']
+            num_recs_input += results['num_recs_input']
+            num_recs_updated += results['num_recs_updated']
+            records += results['records']
+
+        return {'num_recs_added': num_recs_added,
+                'num_recs_input': num_recs_input,
+                'num_recs_updated': num_recs_updated,
+                'records': records}
+
+    def import_from_list(self, dbid, csv_list, clist, encoding='utf-8', skipfirst=True, raw=False ):
+        records_csv = ''.join(csv_list).decode(encoding)
         params = {'ticket':self.ticket, 'clist':clist, 'records_csv':records_csv, 'skipfirst':'1' if skipfirst else '0'}
         if self.apptoken:
             params['apptoken'] = self.apptoken
