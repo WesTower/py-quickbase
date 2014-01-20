@@ -142,9 +142,24 @@ class Connection(object):
         results = _execute_api_call(self.url+'db/'+dbid, 'API_ImportFromCSV', params)
         if raw:
             return results
-        return {'num_recs_added': int(results.find('num_recs_added').text),
-                'num_recs_input': int(results.find('num_recs_input').text),
-                'num_recs_updated': int(results.find('num_recs_updated').text),
+        num_recs_added = results.find('num_recs_added')
+        if num_recs_added:
+            num_recs_added = int(num_recs_added.text)
+        else:
+            num_recs_added = 0
+        num_recs_input = results.find('num_recs_input')
+        if num_recs_input:
+            num_recs_input = int(num_recs_input.text)
+        else:
+            num_recs_input = 0
+        num_recs_updated = results.find('num_recs_updated')
+        if num_recs_updated:
+            num_recs_updated = int(num_recs_updated.text)
+        else:
+            num_recs_updated = 0
+        return {'num_recs_added': num_recs_added,
+                'num_recs_input': num_recs_input,
+                'num_recs_updated': num_recs_updated,
                 'records': [(int(record.text), record.attrs['update_id']) for record in results.find_all('rid')]}
 
     def download(self, dbid, rid, fid, vid="0"):
