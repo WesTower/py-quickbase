@@ -25,7 +25,7 @@ class Connection(object):
         self.apptoken = apptoken
         return
 
-    def do_query(self, dbid, query=None, clist=None, slist=None, options=None, raw=False):
+    def do_query(self, dbid, query=None, clist=None, slist=None, options=None, raw=False, __count=None):
         """Execute API_DoQuery against the current QuickBase
         connection.  QUERY may be either a string query or an integer
         query ID.  If RAW is specified, return the raw BeautifulSoup
@@ -49,18 +49,46 @@ class Connection(object):
                 params['slist'] = '.'.join([str(fid) for fid in slist])
             elif type(slist) in (str, int):
                 params['slist'] = str(slist)
+
+
+        #TODO account for options
         if options:
             if type(slist) in (list, tuple):
                 params['options'] = '.'.join(option for option in options)
             elif type(options) == str:
                 params['options'] = options
-        result = _execute_api_call(self.url+'db/'+dbid,
+
+        results = []
+
+        try:
+            result = _execute_api_call(self.url+'db/'+dbid,
                                    'API_DoQuery',
                                    params)
+            # by default, return a list of live QuickBaseRecords
+            results += [QuickBaseRecord(dict((field.name, field.text) for field in record.findChildren())) for record in result.find_all('record')]
+        except QuickBaseException as error:
+            if error.errcode == u'75':
+                count = self.do_query_count(dbid, query=query)
+                skip = 0
+                print "Too Big"
+                new_count = count/2
+                options = "num-%d.skp-%d" % (new_count, skip) 
+                results += self.do_query(dbid, query=query, clist=clist, slist=slist, options=options)
+
+                #TODO append to current options
+                if len(results) != count:
+                    skip += new_count
+                    for i in xrange(1, count/new_count):
+                        options = "num-%d.skp-%d" % (new_count, skip) 
+                        results += self.do_query(dbid, query=query, clist=clist, slist=slist, options=options)
+            else:
+                raise(error)
+
         if raw:
-            return result
-        # by default, return a list of live QuickBaseRecords
-        return [QuickBaseRecord(dict((field.name, field.text) for field in record.findChildren())) for record in result.find_all('record')]
+            return results
+
+        return results
+
     
     def do_query_count(self, dbid, query=None, raw=False):
         """QUERY is either a string indicating a query or an integer
@@ -254,6 +282,9 @@ class QuickBaseException(Exception):
     def __init__(self, response):
         Exception.__init__(self, str(response))
         self.response = response
+        self.errcode = response.errcode.string
+        self.errtext = response.errtext.string
+        self.errdetail = response.errdetail.string
    
 class QuickBaseRecordException(Exception):
     def __init__(self, message, record=None):
@@ -281,8 +312,7 @@ def connect(url, username, password, apptoken=None, hours=4):
                                  'hours':hours,
                                  })
     return Connection(url, response.userid.string, response.ticket.string, username, password, apptoken)
-    
-    
+
 def _execute_raw_api_call(url, api_call, parameters):
     """Execute an api call API_CALL on URL.  PARAMETERS is a
     dictionary, e.g. {'username':'foo', 'password':'bar'}."""
@@ -308,6 +338,7 @@ def _execute_raw_api_call(url, api_call, parameters):
                               headers={'QUICKBASE-ACTION':api_call,
                                        'Content-Type':'application/xml',
                                        })
+    #consider a @retry decorator to had some robustness again random network errors
     response = urllib2.urlopen(request)
     return response.readlines()
 
