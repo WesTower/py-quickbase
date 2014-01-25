@@ -25,7 +25,7 @@ class Connection(object):
         self.apptoken = apptoken
         return
 
-    def do_query(self, dbid, query=None, clist=None, slist=None, options=None, raw=False, udata=None, __count=None):
+    def do_query(self, dbid, query=None, clist=None, slist=None, options={}, raw=False, udata=None, __count=None):
         """Execute API_DoQuery against the current QuickBase
         connection.  QUERY may be either a string query or an integer
         query ID.  If RAW is specified, return the raw BeautifulSoup
@@ -50,12 +50,13 @@ class Connection(object):
             elif type(slist) in (str, int):
                 params['slist'] = str(slist)
 
-        #TODO account for options
         if options:
             if type(options) == dict:
                 params['options'] = '.'.join('%s-%s' % (k,v) for k,v in options.items() if k != 'onlynew')
                 if options['onlynew']:
                     params['options'] += ".onlynew"
+            else:
+                raise Exception("You passed a %s for options instead of a dict" % type(options))
 
         results = []
 
@@ -67,36 +68,34 @@ class Connection(object):
             results += [QuickBaseRecord(dict((field.name, field.text) for field in record.findChildren())) for record in result.find_all('record')]
 
         except QuickBaseException as error:
-            total_count = self.do_query_count(dbid, query=query)
-
             # If QuickBase returns a 'Request too large' error, 
             # then divide the last requested count in half and try again.
             if error.errcode == u'75':
-                error_count = int(error.udata) if error.udata else total_count
+                if options and 'num' in options:
+                    error_count = int(options['num'])
+                else:
+                    total_count = self.do_query_count(dbid, query=query)
+                    error_count = total_count
                 #print "Records requested too large: %d" % error_count
                 import pdb; pdb.set_trace()
-
-                skip = 0
-                new_count = error_count/2
-                udata = str(new_count)
                 
+                if 'skp' in options:
+                    skp = options['skp']
+                else:
+                    skp = 0
+                new_count = error_count/2
+                    
                 # Handle and append to existing options
-                if options:
-                    # save current options
-                    pass
-                else:        
-                    new_options = "num-%d.skp-%d" % (new_count, skip) 
+                options['num'] = error_count
+                options['skp'] = skp
 
-                # This time pass in udata with the new_count, it will be returned
-                # in the exception response so it can continue to be divided in half.
-                results += self.do_query(dbid, query=query, clist=clist, slist=slist, options=new_options, udata=udata)
-
-                #TODO append to current options
-                if len(results) != total_count:
-                    skip += new_count
-                    for i in xrange(1, total_count/new_count):
-                        options = "num-%d.skp-%d" % (new_count, skip) 
+                partial_results = self.do_query(dbid, query=query, clist=clist, slist=slist, options=options)
+                if len(partial_results) > 1:
+                    results += partial_results
+                    for i in xrange(1, total_count/len(partial_results)):
+                        options['skp'] += len(partial_results)
                         results += self.do_query(dbid, query=query, clist=clist, slist=slist, options=options)
+
             else:
                 raise(error)
 
