@@ -25,13 +25,13 @@ class Connection(object):
         self.apptoken = apptoken
         return
 
-    def do_query(self, dbid, query=None, clist=None, slist=None, options=None, raw=False, __count=None):
+    def do_query(self, dbid, query=None, clist=None, slist=None, options=None, raw=False, udata=None, __count=None):
         """Execute API_DoQuery against the current QuickBase
         connection.  QUERY may be either a string query or an integer
         query ID.  If RAW is specified, return the raw BeautifulSoup
         XML node structure, otherwise return a list of
         QuickBaseRecords."""
-        params = {'ticket':self.ticket}
+        params = {'ticket':self.ticket, 'udata':udata}
         if self.apptoken:
             params['apptoken'] = self.apptoken
         if query:
@@ -50,42 +50,58 @@ class Connection(object):
             elif type(slist) in (str, int):
                 params['slist'] = str(slist)
 
-
         #TODO account for options
         if options:
-            if type(slist) in (list, tuple):
-                params['options'] = '.'.join(option for option in options)
-            elif type(options) == str:
-                params['options'] = options
+            if type(options) == dict:
+                params['options'] = '.'.join('%s-%s' % (k,v) for k,v in options.items() if k != 'onlynew')
+                if options['onlynew']:
+                    params['options'] += ".onlynew"
 
         results = []
 
         try:
             result = _execute_api_call(self.url+'db/'+dbid,
-                                   'API_DoQuery',
-                                   params)
+                                       'API_DoQuery',
+                                       params)
             # by default, return a list of live QuickBaseRecords
             results += [QuickBaseRecord(dict((field.name, field.text) for field in record.findChildren())) for record in result.find_all('record')]
+
         except QuickBaseException as error:
+            total_count = self.do_query_count(dbid, query=query)
+
+            # If QuickBase returns a 'Request too large' error, 
+            # then divide the last requested count in half and try again.
             if error.errcode == u'75':
-                count = self.do_query_count(dbid, query=query)
+                error_count = int(error.udata) if error.udata else total_count
+                #print "Records requested too large: %d" % error_count
+                import pdb; pdb.set_trace()
+
                 skip = 0
-                print "Too Big"
-                new_count = count/2
-                options = "num-%d.skp-%d" % (new_count, skip) 
-                results += self.do_query(dbid, query=query, clist=clist, slist=slist, options=options)
+                new_count = error_count/2
+                udata = str(new_count)
+                
+                # Handle and append to existing options
+                if options:
+                    # save current options
+                    pass
+                else:        
+                    new_options = "num-%d.skp-%d" % (new_count, skip) 
+
+                # This time pass in udata with the new_count, it will be returned
+                # in the exception response so it can continue to be divided in half.
+                results += self.do_query(dbid, query=query, clist=clist, slist=slist, options=new_options, udata=udata)
 
                 #TODO append to current options
-                if len(results) != count:
+                if len(results) != total_count:
                     skip += new_count
-                    for i in xrange(1, count/new_count):
+                    for i in xrange(1, total_count/new_count):
                         options = "num-%d.skp-%d" % (new_count, skip) 
                         results += self.do_query(dbid, query=query, clist=clist, slist=slist, options=options)
             else:
                 raise(error)
 
         if raw:
-            return results
+            return result
 
         return results
 
@@ -285,6 +301,10 @@ class QuickBaseException(Exception):
         self.errcode = response.errcode.string
         self.errtext = response.errtext.string
         self.errdetail = response.errdetail.string
+        if response.udata.string != u'None':
+            self.udata = response.udata.string
+        else:
+            self.udata = None
    
 class QuickBaseRecordException(Exception):
     def __init__(self, message, record=None):
