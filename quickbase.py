@@ -53,7 +53,7 @@ class Connection(object):
         if options:
             if type(options) == dict:
                 params['options'] = '.'.join('%s-%s' % (k,v) for k,v in options.items() if k != 'onlynew')
-                if options['onlynew']:
+                if 'onlynew' in options:
                     params['options'] += ".onlynew"
             else:
                 raise Exception("You passed a %s for options instead of a dict" % type(options))
@@ -76,25 +76,21 @@ class Connection(object):
                 else:
                     total_count = self.do_query_count(dbid, query=query)
                     error_count = total_count
-                #print "Records requested too large: %d" % error_count
-                import pdb; pdb.set_trace()
                 
                 if 'skp' in options:
                     skp = options['skp']
                 else:
                     skp = 0
-                new_count = error_count/2
                     
-                # Handle and append to existing options
-                options['num'] = error_count
+                # Split the query in half and attempt two half calls 
+                new_count = error_count/2
+                options['num'] = new_count
                 options['skp'] = skp
+                results += self.do_query(dbid, query=query, clist=clist, slist=slist, options=options)
 
-                partial_results = self.do_query(dbid, query=query, clist=clist, slist=slist, options=options)
-                if len(partial_results) > 1:
-                    results += partial_results
-                    for i in xrange(1, total_count/len(partial_results)):
-                        options['skp'] += len(partial_results)
-                        results += self.do_query(dbid, query=query, clist=clist, slist=slist, options=options)
+                # Increment the 'skip' option by new_count to query the second half
+                options['skp'] = skp + new_count
+                results += self.do_query(dbid, query=query, clist=clist, slist=slist, options=options)
 
             else:
                 raise(error)
