@@ -25,13 +25,13 @@ class Connection(object):
         self.apptoken = apptoken
         return
 
-    def do_query(self, dbid, query=None, clist=None, slist=None, options={}, raw=False, udata=None, __count=None):
+    def do_query(self, dbid, query=None, clist=None, slist=None, options={}, raw=False, udata=None):
         """Execute API_DoQuery against the current QuickBase
         connection.  QUERY may be either a string query or an integer
         query ID.  If RAW is specified, return the raw BeautifulSoup
         XML node structure, otherwise return a list of
         QuickBaseRecords."""
-        params = {'ticket':self.ticket, 'udata':udata}
+        params = {'ticket':self.ticket}
         if self.apptoken:
             params['apptoken'] = self.apptoken
         if query:
@@ -49,7 +49,6 @@ class Connection(object):
                 params['slist'] = '.'.join([str(fid) for fid in slist])
             elif type(slist) in (str, int):
                 params['slist'] = str(slist)
-
         if options:
             if type(options) == dict:
                 params['options'] = '.'.join('%s-%s' % (k,v) for k,v in options.items() if k != 'onlynew')
@@ -57,6 +56,8 @@ class Connection(object):
                     params['options'] += ".onlynew"
             else:
                 raise Exception("You passed a %s for options instead of a dict" % type(options))
+        if udata:
+            params['udata'] = udata
 
         results = []
 
@@ -72,40 +73,35 @@ class Connection(object):
             # then divide the last requested count in half and try again.
             if error.errcode == u'75':
                 if options and 'num' in options:
-                    error_count = int(options['num'])
+                    count = int(options['num'])
                 else:
-                    total_count = self.do_query_count(dbid, query=query)
-                    error_count = total_count
-                
-                if 'skp' in options:
-                    skp = options['skp']
-                else:
-                    skp = 0
+                    count = self.do_query_count(dbid, query=query)
+
+                new_count = count/2
+                skp = options.get('skp', 0)
                     
-                # Split the query in half and attempt two half calls 
-                new_count = error_count/2
-                options['num'] = new_count
-                options['skp'] = skp
-                print "1: ", options, " start ", len(results)
-                results_1 = self.do_query(dbid, query=query, clist=clist, slist=slist, options=options)
-                print "1: ", options, len(results_1), len(results)
+                new_options = options.copy()
+                new_options['num'] = new_count
+                new_options['skp'] = skp
 
-                # Increment the 'skip' option by new_count to query the second half
-                options['skp'] = skp + new_count
-                print "2: ", options, " start ", len(results)
-                results_2 = self.do_query(dbid, query=query, clist=clist, slist=slist, options=options)
-                print "2: ", options, len(results_2), len(results)
+                results += self.do_query(dbid, query=query, clist=clist, slist=slist, options=new_options, nest=nest+1)
 
-                results.extend(results_1 + results_2)
+                # Increment skip to grab the second half
+                skp += new_count
+                new_options['skp'] = skp
+                new_options['num'] = count - new_options['num']
+
+                results += self.do_query(dbid, query=query, clist=clist, slist=slist, options=new_options, nest=nest+1)
+
+                skp += new_count
+                new_options['skp'] = skp
 
             else:
                 raise(error)
-
         if raw:
             return result
 
         return results
-
     
     def do_query_count(self, dbid, query=None, raw=False):
         """QUERY is either a string indicating a query or an integer
@@ -280,20 +276,24 @@ class QuickBaseRecord(object):
     def __contains__(self, x):
         return x in self._fields
 
-    def keys(self):
+    def _keys(self):
         return self._fields.keys()
 
-    def diff(self, record):
-        if not (isinstance(record, QuickBaseRecord) or isinstance(record, dict)):
-            raise QuickBaseRecordException('compare record must be a dict')
-        diffs = {}
-        for key in record.keys():
-            if key not in self._fields.keys():
-                raise QuickBaseRecordException('compare contains key not found in initial QuickBaseRecord: "%s"' % key, self)
-            else:
-                if record[key] != self._fields[key]:
-                    diffs[key] = (self._fields[key], record[key])
-        return diffs
+def diff_records(r1, r2):
+    diffs = {}
+    for key in record.keys():
+        if key not in self._fields.keys():
+            raise QuickBaseRecordException('compare contains key not found in initial QuickBaseRecord: "%s"' % key, self)
+        else:
+            if record[key] != self._fields[key]:
+                diffs[key] = (self._fields[key], record[key])
+
+    
+    r1_keys = r1._keys() if isinstance(r1, QuickBaseRecord) else r1.keys()
+    r2_keys = r2._keys() if isinstance(r2, QuickBaseRecord) else r2.keys()
+
+
+    return diffs
             
 class QuickBaseException(Exception):
     def __init__(self, response):
