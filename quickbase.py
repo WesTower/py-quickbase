@@ -86,11 +86,17 @@ class Connection(object):
                 new_count = error_count/2
                 options['num'] = new_count
                 options['skp'] = skp
-                results += self.do_query(dbid, query=query, clist=clist, slist=slist, options=options)
+                print "1: ", options, " start ", len(results)
+                results_1 = self.do_query(dbid, query=query, clist=clist, slist=slist, options=options)
+                print "1: ", options, len(results_1), len(results)
 
                 # Increment the 'skip' option by new_count to query the second half
                 options['skp'] = skp + new_count
-                results += self.do_query(dbid, query=query, clist=clist, slist=slist, options=options)
+                print "2: ", options, " start ", len(results)
+                results_2 = self.do_query(dbid, query=query, clist=clist, slist=slist, options=options)
+                print "2: ", options, len(results_2), len(results)
+
+                results.extend(results_1 + results_2)
 
             else:
                 raise(error)
