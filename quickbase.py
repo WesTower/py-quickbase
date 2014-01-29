@@ -133,6 +133,19 @@ class Connection(object):
             return result
         return result.find('import_status').text
 
+    def import_from_csv_no_segmentation(self, dbid, csv_file, clist, encoding='utf-8', skipfirst=True, raw=False):
+        records_csv = ''.join(csv_file.readlines()).decode(encoding)
+        params = {'ticket':self.ticket, 'clist':clist, 'records_csv':records_csv, 'skipfirst':'1' if skipfirst else '0'}
+        if self.apptoken:
+            params['apptoken'] = self.apptoken
+        results = _execute_api_call(self.url+'db/'+dbid, 'API_ImportFromCSV', params)
+        if raw:
+            return results
+        return {'num_recs_added': int(results.find('num_recs_added').text),
+                'num_recs_input': int(results.find('num_recs_input').text),
+                'num_recs_updated': int(results.find('num_recs_updated').text),
+                'records': [(int(record.text), record.attrs['update_id']) for record in results.find_all('rid')]}
+
     def import_from_csv(self, dbid, csv_file, clist, encoding='utf-8', skipfirst=True, raw=False):
         num_recs_added = 0
         num_recs_input = 0
