@@ -4,9 +4,11 @@ A Pythonic interface to the QuickBase API.
 
 """
 
+import os
 import logging
 import urllib2
 import json
+import csv
 
 from bs4 import BeautifulSoup
 from xml.dom import minidom
@@ -84,14 +86,14 @@ class Connection(object):
                 new_options['num'] = new_count
                 new_options['skp'] = skp
 
-                results += self.do_query(dbid, query=query, clist=clist, slist=slist, options=new_options, nest=nest+1)
+                results += self.do_query(dbid, query=query, clist=clist, slist=slist, options=new_options)
 
                 # Increment skip to grab the second half
                 skp += new_count
                 new_options['skp'] = skp
                 new_options['num'] = count - new_options['num']
 
-                results += self.do_query(dbid, query=query, clist=clist, slist=slist, options=new_options, nest=nest+1)
+                results += self.do_query(dbid, query=query, clist=clist, slist=slist, options=new_options)
 
                 skp += new_count
                 new_options['skp'] = skp
@@ -176,6 +178,70 @@ class Connection(object):
         return result.find('import_status').text
 
     def import_from_csv(self, dbid, csv_file, clist, encoding='utf-8', skipfirst=True, raw=False):
+        outbound_csv_filepath = os.path.join(os.path.dirname(csv_file.name), 'csv_segment.csv')
+        inbound_csv_reader = csv.reader(csv_file)
+        
+        header = inbound_csv_reader.next()
+        outbound_csv = open(outbound_csv_filepath, 'wb')
+        outbound_csv_writer = csv.writer(outbound_csv)
+        outbound_csv_writer.writerow(header)
+        
+        count = 0
+        num_recs_added = 0
+        num_recs_input = 0
+        num_recs_updated = 0
+        records = []
+
+        for row in inbound_csv_reader:
+            outbound_csv_writer.writerow(row)
+            count += 1
+
+            if count % 5000 == 0: # every n rows write to file
+                outbound_csv.close()
+
+                results = self._import_from_csv(dbid, open(outbound_csv_filepath), clist, encoding, skipfirst, raw)
+                num_recs_added += results['num_recs_added']
+                num_recs_input += results['num_recs_input']
+                num_recs_updated += results['num_recs_updated']
+                records += results['records']
+                print num_recs_input, num_recs_added, num_recs_updated, len(records)
+
+                outbound_csv = open(outbound_csv_filepath, 'wb')
+                outbound_csv_writer = csv.writer(outbound_csv)
+                outbound_csv_writer.writerow(header)
+
+        outbound_csv.close()
+
+        if count % 5000 != 0:
+            print count
+            results = self._import_from_csv(dbid, open(outbound_csv_filepath), clist, encoding, skipfirst, raw)
+            num_recs_added += results['num_recs_added']
+            num_recs_input += results['num_recs_input']
+            num_recs_updated += results['num_recs_updated']
+            records += results['records']
+            print num_recs_input, num_recs_added, num_recs_updated, len(records)
+
+        os.remove(outbound_csv_filepath)
+        return {'num_recs_added': num_recs_added,
+                'num_recs_input': num_recs_input,
+                'num_recs_updated': num_recs_updated,
+                'records': records}
+
+    def _import_from_csv(self, dbid, csv_file, clist, encoding='utf-8', skipfirst=True, raw=False):
+        records_csv = ''.join(csv_file.readlines()).decode(encoding)
+        params = {'ticket':self.ticket, 'clist':clist, 'records_csv':records_csv, 'skipfirst':'1' if skipfirst else '0'}
+        if self.apptoken:
+            params['apptoken'] = self.apptoken
+        results = _execute_api_call(self.url+'db/'+dbid, 'API_ImportFromCSV', params)
+        if raw:
+            return results
+        return {'num_recs_added': int(results.find('num_recs_added').text),
+                'num_recs_input': int(results.find('num_recs_input').text),
+                'num_recs_updated': int(results.find('num_recs_updated').text),
+                'records': [(int(record.text), record.attrs['update_id']) for record in results.find_all('rid')]}
+    
+    """
+    def import_from_csv(self, dbid, csv_file, clist, encoding='utf-8', skipfirst=True, raw=False):
         num_recs_added = 0
         num_recs_input = 0
         num_recs_updated = 0
@@ -245,6 +311,7 @@ class Connection(object):
                 'num_recs_input': num_recs_input,
                 'num_recs_updated': num_recs_updated,
                 'records': [(int(record.text), record.attrs['update_id']) for record in results.find_all('rid')]}
+    """
 
     def download(self, dbid, rid, fid, vid="0"):
         url = '%sup/%s/a/r%s/e%s/v%s?ticket=%s&apptoken=%s' % (self.url, dbid, rid, fid, vid, self.ticket, self.apptoken)
@@ -302,10 +369,6 @@ class QuickBaseException(Exception):
         self.errcode = response.errcode.string
         self.errtext = response.errtext.string
         self.errdetail = response.errdetail.string
-        if response.udata.string != u'None':
-            self.udata = response.udata.string
-        else:
-            self.udata = None
    
 class QuickBaseRecordException(Exception):
     def __init__(self, message, record=None):
