@@ -27,12 +27,13 @@ class Connection(object):
         self.apptoken = apptoken
         return
 
-    def do_query(self, dbid, query=None, clist=None, slist=None, options={}, raw=False, udata=None):
+    def do_query(self, dbid, query=None, clist=None, slist=None, options={}, raw=False):
         """Execute API_DoQuery against the current QuickBase
         connection.  QUERY may be either a string query or an integer
         query ID.  If RAW is specified, return the raw BeautifulSoup
-        XML node structure, otherwise return a list of
-        QuickBaseRecords."""
+        XML node structure, otherwise return a list of QuickBaseRecords.
+        If Quickbase returns a 'query too large' error, split the query
+        in half and try again until the """
         params = {'ticket':self.ticket}
         if self.apptoken:
             params['apptoken'] = self.apptoken
@@ -58,18 +59,13 @@ class Connection(object):
                     params['options'] += ".onlynew"
             else:
                 raise Exception("You passed a %s for options instead of a dict" % type(options))
-        if udata:
-            params['udata'] = udata
-
         results = []
-
         try:
             result = _execute_api_call(self.url+'db/'+dbid,
                                        'API_DoQuery',
                                        params)
             # by default, return a list of live QuickBaseRecords
             results += [QuickBaseRecord(dict((field.name, field.text) for field in record.findChildren())) for record in result.find_all('record')]
-
         except QuickBaseException as error:
             # If QuickBase returns a 'Request too large' error, 
             # then divide the last requested count in half and try again.
@@ -78,26 +74,18 @@ class Connection(object):
                     count = int(options['num'])
                 else:
                     count = self.do_query_count(dbid, query=query)
-
                 new_count = count/2
                 skp = options.get('skp', 0)
-                    
                 new_options = options.copy()
                 new_options['num'] = new_count
                 new_options['skp'] = skp
-
                 results += self.do_query(dbid, query=query, clist=clist, slist=slist, options=new_options)
-
-                # Increment skip to grab the second half
-                skp += new_count
+                skp += new_count # Increment skip to grab the second half
                 new_options['skp'] = skp
                 new_options['num'] = count - new_options['num']
-
                 results += self.do_query(dbid, query=query, clist=clist, slist=slist, options=new_options)
-
                 skp += new_count
                 new_options['skp'] = skp
-
             else:
                 raise(error)
         if raw:
@@ -177,50 +165,41 @@ class Connection(object):
             return result
         return result.find('import_status').text
 
-    def import_from_csv(self, dbid, csv_file, clist, encoding='utf-8', skipfirst=True, raw=False):
+    def import_from_csv(self, dbid, csv_file, clist, encoding='utf-8', skipfirst=True, raw=False, split=5000):
+        """ CSV_FILE is an open() .csv file. A CLIST is required
+        to specify column header order. SPLIT specifies the number
+        of rows at which to split the csv for separate imports."""
         outbound_csv_filepath = os.path.join(os.path.dirname(csv_file.name), 'csv_segment.csv')
         inbound_csv_reader = csv.reader(csv_file)
-        
         header = inbound_csv_reader.next()
         outbound_csv = open(outbound_csv_filepath, 'wb')
         outbound_csv_writer = csv.writer(outbound_csv)
         outbound_csv_writer.writerow(header)
-        
         count = 0
         num_recs_added = 0
         num_recs_input = 0
         num_recs_updated = 0
         records = []
-
         for row in inbound_csv_reader:
             outbound_csv_writer.writerow(row)
             count += 1
-
-            if count % 5000 == 0: # every n rows write to file
+            if count % split == 0: # every n rows write to file
                 outbound_csv.close()
-
                 results = self._import_from_csv(dbid, open(outbound_csv_filepath), clist, encoding, skipfirst, raw)
                 num_recs_added += results['num_recs_added']
                 num_recs_input += results['num_recs_input']
                 num_recs_updated += results['num_recs_updated']
                 records += results['records']
-                print num_recs_input, num_recs_added, num_recs_updated, len(records)
-
                 outbound_csv = open(outbound_csv_filepath, 'wb')
                 outbound_csv_writer = csv.writer(outbound_csv)
                 outbound_csv_writer.writerow(header)
-
         outbound_csv.close()
-
-        if count % 5000 != 0:
-            print count
+        if count % split != 0:
             results = self._import_from_csv(dbid, open(outbound_csv_filepath), clist, encoding, skipfirst, raw)
             num_recs_added += results['num_recs_added']
             num_recs_input += results['num_recs_input']
             num_recs_updated += results['num_recs_updated']
             records += results['records']
-            print num_recs_input, num_recs_added, num_recs_updated, len(records)
-
         os.remove(outbound_csv_filepath)
         return {'num_recs_added': num_recs_added,
                 'num_recs_input': num_recs_input,
@@ -240,79 +219,6 @@ class Connection(object):
                 'num_recs_updated': int(results.find('num_recs_updated').text),
                 'records': [(int(record.text), record.attrs['update_id']) for record in results.find_all('rid')]}
     
-    """
-    def import_from_csv(self, dbid, csv_file, clist, encoding='utf-8', skipfirst=True, raw=False):
-        num_recs_added = 0
-        num_recs_input = 0
-        num_recs_updated = 0
-        records = []
-    
-        csv_header = ""    
-        csv_list = []
-        index = 0
-        max_row_count = 1000
-    
-        for row in csv_file:
-            if not csv_header:
-                csv_header = row
-                csv_list.append( csv_header )
-            else:
-                index += 1
-                csv_list.append( row )
-                if index == max_row_count:
-                    print "records to import: " + str(len(csv_list))
-                    results = self.import_from_list(dbid, csv_list, clist, encoding, skipfirst, raw)
-                    num_recs_added += results['num_recs_added']
-                    num_recs_input += results['num_recs_input']
-                    num_recs_updated += results['num_recs_updated']
-                    records += results['records']
-
-                    index = 0
-                    csv_list = []
-                    csv_list.append( csv_header )
-
-        if index > 0:
-            print "records to import: " + str(len(csv_list))
-            results = self.import_from_list(dbid, csv_list, clist, encoding, skipfirst, raw)
-            num_recs_added += results['num_recs_added']
-            num_recs_input += results['num_recs_input']
-            num_recs_updated += results['num_recs_updated']
-            records += results['records']
-
-        return {'num_recs_added': num_recs_added,
-                'num_recs_input': num_recs_input,
-                'num_recs_updated': num_recs_updated,
-                'records': records}
-
-    def import_from_list(self, dbid, csv_list, clist, encoding='utf-8', skipfirst=True, raw=False ):
-        records_csv = ''.join(csv_list).decode(encoding)
-        params = {'ticket':self.ticket, 'clist':clist, 'records_csv':records_csv, 'skipfirst':'1' if skipfirst else '0'}
-        if self.apptoken:
-            params['apptoken'] = self.apptoken
-        results = _execute_api_call(self.url+'db/'+dbid, 'API_ImportFromCSV', params)
-        if raw:
-            return results
-        num_recs_added = results.find('num_recs_added')
-        if num_recs_added:
-            num_recs_added = int(num_recs_added.text)
-        else:
-            num_recs_added = 0
-        num_recs_input = results.find('num_recs_input')
-        if num_recs_input:
-            num_recs_input = int(num_recs_input.text)
-        else:
-            num_recs_input = 0
-        num_recs_updated = results.find('num_recs_updated')
-        if num_recs_updated:
-            num_recs_updated = int(num_recs_updated.text)
-        else:
-            num_recs_updated = 0
-        return {'num_recs_added': num_recs_added,
-                'num_recs_input': num_recs_input,
-                'num_recs_updated': num_recs_updated,
-                'records': [(int(record.text), record.attrs['update_id']) for record in results.find_all('rid')]}
-    """
-
     def download(self, dbid, rid, fid, vid="0"):
         url = '%sup/%s/a/r%s/e%s/v%s?ticket=%s&apptoken=%s' % (self.url, dbid, rid, fid, vid, self.ticket, self.apptoken)
         return urllib2.urlopen(url)
@@ -346,22 +252,6 @@ class QuickBaseRecord(object):
     def _keys(self):
         return self._fields.keys()
 
-def diff_records(r1, r2):
-    diffs = {}
-    for key in record.keys():
-        if key not in self._fields.keys():
-            raise QuickBaseRecordException('compare contains key not found in initial QuickBaseRecord: "%s"' % key, self)
-        else:
-            if record[key] != self._fields[key]:
-                diffs[key] = (self._fields[key], record[key])
-
-    
-    r1_keys = r1._keys() if isinstance(r1, QuickBaseRecord) else r1.keys()
-    r2_keys = r2._keys() if isinstance(r2, QuickBaseRecord) else r2.keys()
-
-
-    return diffs
-            
 class QuickBaseException(Exception):
     def __init__(self, response):
         Exception.__init__(self, str(response))
