@@ -6,6 +6,8 @@ A Pythonic interface to the QuickBase API.
 
 import logging
 import urllib2
+import os
+import csv
 
 from bs4 import BeautifulSoup
 from xml.dom import minidom
@@ -133,6 +135,37 @@ class Connection(object):
             return result
         return result.find('import_status').text
 
+    def import_from_csv(self, dbid, csv_file, clist, encoding='utf-8', skipfirst=True, raw=False):
+        outbound_csv_filepath = os.path.join(os.path.dirname(csv_file.name),'csv_segment.csv')
+        inbound_csv_reader = csv.reader( csv_file )
+        
+        header = inbound_csv_reader.next()
+        count = 0
+        
+        outbound_csv = open( outbound_csv_filepath, 'wb' )
+        outbound_csv_writer = csv.writer( outbound_csv )
+        outbound_csv_writer.writerow( header )
+        
+        for row in inbound_csv_reader:
+            outbound_csv_writer.writerow( row )
+            count += 1
+        
+            if count % 5000 == 0: # every n rows write to file
+                print count
+                outbound_csv.close()
+                self.import_from_csv_no_segmentation( dbid, open(outbound_csv_filepath), clist, encoding, skipfirst, raw )
+        
+                outbound_csv = open( outbound_csv_filepath, 'wb' )
+                outbound_csv_writer = csv.writer( outbound_csv )
+                outbound_csv_writer.writerow( header )
+        
+        outbound_csv.close()
+        if count % 5000 != 0:
+            print count
+            self.import_from_csv_no_segmentation( dbid, open(outbound_csv_filepath), clist, encoding, skipfirst, raw )
+        
+        os.remove( outbound_csv_filepath )
+
     def import_from_csv_no_segmentation(self, dbid, csv_file, clist, encoding='utf-8', skipfirst=True, raw=False):
         records_csv = ''.join(csv_file.readlines()).decode(encoding)
         params = {'ticket':self.ticket, 'clist':clist, 'records_csv':records_csv, 'skipfirst':'1' if skipfirst else '0'}
@@ -144,77 +177,6 @@ class Connection(object):
         return {'num_recs_added': int(results.find('num_recs_added').text),
                 'num_recs_input': int(results.find('num_recs_input').text),
                 'num_recs_updated': int(results.find('num_recs_updated').text),
-                'records': [(int(record.text), record.attrs['update_id']) for record in results.find_all('rid')]}
-
-    def import_from_csv(self, dbid, csv_file, clist, encoding='utf-8', skipfirst=True, raw=False):
-        num_recs_added = 0
-        num_recs_input = 0
-        num_recs_updated = 0
-        records = []
-    
-        csv_header = ""    
-        csv_list = []
-        index = 0
-        max_row_count = 1000
-    
-        for row in csv_file:
-            if not csv_header:
-                csv_header = row
-                csv_list.append( csv_header )
-            else:
-                index += 1
-                csv_list.append( row )
-                if index == max_row_count:
-                    print "records to import: " + str(len(csv_list))
-                    results = self.import_from_list(dbid, csv_list, clist, encoding, skipfirst, raw)
-                    num_recs_added += results['num_recs_added']
-                    num_recs_input += results['num_recs_input']
-                    num_recs_updated += results['num_recs_updated']
-                    records += results['records']
-
-                    index = 0
-                    csv_list = []
-                    csv_list.append( csv_header )
-
-        if index > 0:
-            print "records to import: " + str(len(csv_list))
-            results = self.import_from_list(dbid, csv_list, clist, encoding, skipfirst, raw)
-            num_recs_added += results['num_recs_added']
-            num_recs_input += results['num_recs_input']
-            num_recs_updated += results['num_recs_updated']
-            records += results['records']
-
-        return {'num_recs_added': num_recs_added,
-                'num_recs_input': num_recs_input,
-                'num_recs_updated': num_recs_updated,
-                'records': records}
-
-    def import_from_list(self, dbid, csv_list, clist, encoding='utf-8', skipfirst=True, raw=False ):
-        records_csv = ''.join(csv_list).decode(encoding)
-        params = {'ticket':self.ticket, 'clist':clist, 'records_csv':records_csv, 'skipfirst':'1' if skipfirst else '0'}
-        if self.apptoken:
-            params['apptoken'] = self.apptoken
-        results = _execute_api_call(self.url+'db/'+dbid, 'API_ImportFromCSV', params)
-        if raw:
-            return results
-        num_recs_added = results.find('num_recs_added')
-        if num_recs_added:
-            num_recs_added = int(num_recs_added.text)
-        else:
-            num_recs_added = 0
-        num_recs_input = results.find('num_recs_input')
-        if num_recs_input:
-            num_recs_input = int(num_recs_input.text)
-        else:
-            num_recs_input = 0
-        num_recs_updated = results.find('num_recs_updated')
-        if num_recs_updated:
-            num_recs_updated = int(num_recs_updated.text)
-        else:
-            num_recs_updated = 0
-        return {'num_recs_added': num_recs_added,
-                'num_recs_input': num_recs_input,
-                'num_recs_updated': num_recs_updated,
                 'records': [(int(record.text), record.attrs['update_id']) for record in results.find_all('rid')]}
 
     def download(self, dbid, rid, fid, vid="0"):
