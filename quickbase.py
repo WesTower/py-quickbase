@@ -4,9 +4,10 @@ A Pythonic interface to the QuickBase API.
 
 """
 
+import os
 import logging
 import urllib2
-import os
+import json
 import csv
 
 from bs4 import BeautifulSoup
@@ -26,12 +27,13 @@ class Connection(object):
         self.apptoken = apptoken
         return
 
-    def do_query(self, dbid, query=None, clist=None, slist=None, options=None, raw=False):
+    def do_query(self, dbid, query=None, clist=None, slist=None, options={}, raw=False):
         """Execute API_DoQuery against the current QuickBase
         connection.  QUERY may be either a string query or an integer
         query ID.  If RAW is specified, return the raw BeautifulSoup
-        XML node structure, otherwise return a list of
-        QuickBaseRecords."""
+        XML node structure, otherwise return a list of QuickBaseRecords.
+        If Quickbase returns a 'query too large' error, split the query
+        in half and try again until the """
         params = {'ticket':self.ticket}
         if self.apptoken:
             params['apptoken'] = self.apptoken
@@ -51,17 +53,45 @@ class Connection(object):
             elif type(slist) in (str, int):
                 params['slist'] = str(slist)
         if options:
-            if type(slist) in (list, tuple):
-                params['options'] = '.'.join(option for option in options)
-            elif type(options) == str:
-                params['options'] = options
-        result = _execute_api_call(self.url+'db/'+dbid,
-                                   'API_DoQuery',
-                                   params)
+            if type(options) == dict:
+                params['options'] = '.'.join('%s-%s' % (k,v) for k,v in options.items() if k != 'onlynew')
+                if 'onlynew' in options:
+                    params['options'] += ".onlynew"
+            else:
+                raise Exception("You passed a %s for options instead of a dict" % type(options))
+        results = []
+        try:
+            result = _execute_api_call(self.url+'db/'+dbid,
+                                       'API_DoQuery',
+                                       params)
+            # by default, return a list of live QuickBaseRecords
+            results += [QuickBaseRecord(dict((field.name, field.text) for field in record.findChildren())) for record in result.find_all('record')]
+        except QuickBaseException as error:
+            # If QuickBase returns a 'Request too large' error, 
+            # then divide the last requested count in half and try again.
+            if error.errcode == u'75':
+                if options and 'num' in options:
+                    count = int(options['num'])
+                else:
+                    count = self.do_query_count(dbid, query=query)
+                new_count = count/2
+                skp = options.get('skp', 0)
+                new_options = options.copy()
+                new_options['num'] = new_count
+                new_options['skp'] = skp
+                results += self.do_query(dbid, query=query, clist=clist, slist=slist, options=new_options)
+                skp += new_count # Increment skip to grab the second half
+                new_options['skp'] = skp
+                new_options['num'] = count - new_options['num']
+                results += self.do_query(dbid, query=query, clist=clist, slist=slist, options=new_options)
+                skp += new_count
+                new_options['skp'] = skp
+            else:
+                raise(error)
         if raw:
             return result
-        # by default, return a list of live QuickBaseRecords
-        return [QuickBaseRecord(dict((field.name, field.text) for field in record.findChildren())) for record in result.find_all('record')]
+
+        return results
     
     def do_query_count(self, dbid, query=None, raw=False):
         """QUERY is either a string indicating a query or an integer
@@ -86,7 +116,7 @@ class Connection(object):
         is an integer then it is a QuickBase field ID; if it is a
         string then it is a field name."""
         if not (isinstance(record, QuickBaseRecord) or isinstance(record, dict)):
-            raise Exception("record must be a QuickBaseRecord or dictionary")
+            raise QuickBaseRecordException("record must be a QuickBaseRecord or dictionary")
         params = {'ticket': self.ticket}
         if self.apptoken:
             params['apptoken'] = self.apptoken
@@ -135,6 +165,7 @@ class Connection(object):
             return result
         return result.find('import_status').text
 
+<<<<<<< HEAD
     def import_from_csv(self, dbid, csv_file, clist, encoding='utf-8', skipfirst=True, raw=False):
         outbound_csv_filepath = os.path.join(os.path.dirname(csv_file.name),'csv_segment.csv')
         inbound_csv_reader = csv.reader( csv_file )
@@ -167,6 +198,50 @@ class Connection(object):
         os.remove( outbound_csv_filepath )
 
     def import_from_csv_no_segmentation(self, dbid, csv_file, clist, encoding='utf-8', skipfirst=True, raw=False):
+=======
+    def import_from_csv(self, dbid, csv_file, clist, encoding='utf-8', skipfirst=True, raw=False, split=5000):
+        """ CSV_FILE is an open() .csv file. A CLIST is required
+        to specify column header order. SPLIT specifies the number
+        of rows at which to split the csv for separate imports."""
+        outbound_csv_filepath = os.path.join(os.path.dirname(csv_file.name), 'csv_segment.csv')
+        inbound_csv_reader = csv.reader(csv_file)
+        header = inbound_csv_reader.next()
+        outbound_csv = open(outbound_csv_filepath, 'wb')
+        outbound_csv_writer = csv.writer(outbound_csv)
+        outbound_csv_writer.writerow(header)
+        count = 0
+        num_recs_added = 0
+        num_recs_input = 0
+        num_recs_updated = 0
+        records = []
+        for row in inbound_csv_reader:
+            outbound_csv_writer.writerow(row)
+            count += 1
+            if count % split == 0: # every n rows write to file
+                outbound_csv.close()
+                results = self._import_from_csv(dbid, open(outbound_csv_filepath), clist, encoding, skipfirst, raw)
+                num_recs_added += results['num_recs_added']
+                num_recs_input += results['num_recs_input']
+                num_recs_updated += results['num_recs_updated']
+                records += results['records']
+                outbound_csv = open(outbound_csv_filepath, 'wb')
+                outbound_csv_writer = csv.writer(outbound_csv)
+                outbound_csv_writer.writerow(header)
+        outbound_csv.close()
+        if count % split != 0:
+            results = self._import_from_csv(dbid, open(outbound_csv_filepath), clist, encoding, skipfirst, raw)
+            num_recs_added += results['num_recs_added']
+            num_recs_input += results['num_recs_input']
+            num_recs_updated += results['num_recs_updated']
+            records += results['records']
+        os.remove(outbound_csv_filepath)
+        return {'num_recs_added': num_recs_added,
+                'num_recs_input': num_recs_input,
+                'num_recs_updated': num_recs_updated,
+                'records': records}
+
+    def _import_from_csv(self, dbid, csv_file, clist, encoding='utf-8', skipfirst=True, raw=False):
+>>>>>>> 5e2b02ddb31079a092a5d6ce3323f34407673278
         records_csv = ''.join(csv_file.readlines()).decode(encoding)
         params = {'ticket':self.ticket, 'clist':clist, 'records_csv':records_csv, 'skipfirst':'1' if skipfirst else '0'}
         if self.apptoken:
@@ -178,7 +253,7 @@ class Connection(object):
                 'num_recs_input': int(results.find('num_recs_input').text),
                 'num_recs_updated': int(results.find('num_recs_updated').text),
                 'records': [(int(record.text), record.attrs['update_id']) for record in results.find_all('rid')]}
-
+    
     def download(self, dbid, rid, fid, vid="0"):
         url = '%sup/%s/a/r%s/e%s/v%s?ticket=%s&apptoken=%s' % (self.url, dbid, rid, fid, vid, self.ticket, self.apptoken)
         return urllib2.urlopen(url)
@@ -209,15 +284,26 @@ class QuickBaseRecord(object):
     def __contains__(self, x):
         return x in self._fields
 
+    def _keys(self):
+        return self._fields.keys()
 
-class QuickBaseException(BaseException):
+class QuickBaseException(Exception):
     def __init__(self, response):
+        Exception.__init__(self, str(response))
         self.response = response
-        return
+        self.errcode = response.errcode.string
+        self.errtext = response.errtext.string
+        self.errdetail = response.errdetail.string
+   
+class QuickBaseRecordException(Exception):
+    def __init__(self, message, record=None):
+        Exception.__init__(self, message)
+        self.record = record
 
     def __str__(self):
-        return str(self.response)
-
+        if self.record:
+            self.message += '\n'+json.dumps(self.record._fields)
+        return self.message
 
 def connect(url, username, password, apptoken=None, hours=4):
     """Connect to the QuickBase instance at URL (FIXME: of the form
@@ -235,8 +321,7 @@ def connect(url, username, password, apptoken=None, hours=4):
                                  'hours':hours,
                                  })
     return Connection(url, response.userid.string, response.ticket.string, username, password, apptoken)
-    
-    
+
 def _execute_raw_api_call(url, api_call, parameters):
     """Execute an api call API_CALL on URL.  PARAMETERS is a
     dictionary, e.g. {'username':'foo', 'password':'bar'}."""
@@ -262,6 +347,7 @@ def _execute_raw_api_call(url, api_call, parameters):
                               headers={'QUICKBASE-ACTION':api_call,
                                        'Content-Type':'application/xml',
                                        })
+    #consider a @retry decorator to had some robustness again random network errors
     response = urllib2.urlopen(request)
     return response.readlines()
 
