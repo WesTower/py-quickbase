@@ -165,40 +165,6 @@ class Connection(object):
             return result
         return result.find('import_status').text
 
-<<<<<<< HEAD
-    def import_from_csv(self, dbid, csv_file, clist, encoding='utf-8', skipfirst=True, raw=False):
-        outbound_csv_filepath = os.path.join(os.path.dirname(csv_file.name),'csv_segment.csv')
-        inbound_csv_reader = csv.reader( csv_file )
-        
-        header = inbound_csv_reader.next()
-        count = 0
-        
-        outbound_csv = open( outbound_csv_filepath, 'wb' )
-        outbound_csv_writer = csv.writer( outbound_csv )
-        outbound_csv_writer.writerow( header )
-        
-        for row in inbound_csv_reader:
-            outbound_csv_writer.writerow( row )
-            count += 1
-        
-            if count % 5000 == 0: # every n rows write to file
-                print count
-                outbound_csv.close()
-                self.import_from_csv_no_segmentation( dbid, open(outbound_csv_filepath), clist, encoding, skipfirst, raw )
-        
-                outbound_csv = open( outbound_csv_filepath, 'wb' )
-                outbound_csv_writer = csv.writer( outbound_csv )
-                outbound_csv_writer.writerow( header )
-        
-        outbound_csv.close()
-        if count % 5000 != 0:
-            print count
-            self.import_from_csv_no_segmentation( dbid, open(outbound_csv_filepath), clist, encoding, skipfirst, raw )
-        
-        os.remove( outbound_csv_filepath )
-
-    def import_from_csv_no_segmentation(self, dbid, csv_file, clist, encoding='utf-8', skipfirst=True, raw=False):
-=======
     def import_from_csv(self, dbid, csv_file, clist, encoding='utf-8', skipfirst=True, raw=False, split=5000):
         """ CSV_FILE is an open() .csv file. A CLIST is required
         to specify column header order. SPLIT specifies the number
@@ -241,7 +207,6 @@ class Connection(object):
                 'records': records}
 
     def _import_from_csv(self, dbid, csv_file, clist, encoding='utf-8', skipfirst=True, raw=False):
->>>>>>> 5e2b02ddb31079a092a5d6ce3323f34407673278
         records_csv = ''.join(csv_file.readlines()).decode(encoding)
         params = {'ticket':self.ticket, 'clist':clist, 'records_csv':records_csv, 'skipfirst':'1' if skipfirst else '0'}
         if self.apptoken:
