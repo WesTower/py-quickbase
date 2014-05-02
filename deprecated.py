@@ -11,7 +11,6 @@ import logging
 import ConfigParser
 import os.path
 import re
-import base64
 import quickbase
 
 
@@ -342,15 +341,6 @@ def delete_record(ticket, apptoken, table, rid):
                              'API_DeleteRecord',
                              params)
 
-
-class File(object):
-    def __init__(self, filename, data):
-        self.filename = filename
-        self.data = data
-        return
-
-    def __unicode__(self):
-        return unicode(base64.b64encode(self.data))
 
 def change_record_owner(ticket, apptoken, table, record, owner):
     params = {'ticket': ticket.ticket,

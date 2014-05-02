@@ -9,6 +9,7 @@ import logging
 import urllib2
 import json
 import csv
+import base64
 
 from bs4 import BeautifulSoup
 from xml.dom import minidom
