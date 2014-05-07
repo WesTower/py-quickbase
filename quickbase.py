@@ -253,6 +253,31 @@ class QuickBaseRecord(object):
     def _keys(self):
         return self._fields.keys()
 
+class QuickBaseRecordDiff(object):
+    """
+    Calculate the difference between two QuickBase records
+    Records can be of type(dict) or type(QuickBaseRecord) 
+    Can return sets added, removed, changed and unchanged
+    """
+    def __init__(self, old_record, new_record):
+        self.new_record = new_record._fields if isinstance(new_record, QuickBaseRecord) else new_record
+        self.old_record = old_record._fields if isinstance(old_record, QuickBaseRecord) else old_record
+        self.new_set = set(self.new_record.keys())
+        self.old_set = set(self.old_record.keys())
+        self.intersect = self.new_set.intersection(self.old_set)
+
+    def added(self):
+        return self.new_set - self.intersect 
+
+    def removed(self):
+        return self.old_set - self.intersect 
+
+    def changed(self):
+        return set(o for o in self.intersect if self.old_record[o] != self.new_record[o])
+
+    def unchanged(self):
+        return set(o for o in self.intersect if self.old_record[o] == self.new_record[o])
+
 class QuickBaseException(Exception):
     def __init__(self, response):
         Exception.__init__(self, str(response))
@@ -287,6 +312,15 @@ def connect(url, username, password, apptoken=None, hours=4):
                                  'hours':hours,
                                  })
     return Connection(url, response.userid.string, response.ticket.string, username, password, apptoken)
+
+def diff_records(r1, r2):
+    if type(r1) == QuickBaseRecord:
+        r1 = r1._keys()
+    if type(r2) == QuickBaseRecord:
+        r2 = r2._keys()
+
+
+    return diff
 
 def _execute_raw_api_call(url, api_call, parameters):
     """Execute an api call API_CALL on URL.  PARAMETERS is a
