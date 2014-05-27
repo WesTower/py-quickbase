@@ -155,6 +155,19 @@ class Connection(object):
             return results
         return (int(results.find('num_fields_changed').text), results.find('update_id').text)
 
+    def delete_record(self, dbid, record_id, raw=False):
+        params = {'ticket': self.ticket,
+                  'rid': record_id
+                  }
+        if self.apptoken:
+            params['apptoken'] = self.apptoken
+        results = _execute_api_call(self.url+'db/'+dbid,
+                                    'API_DeleteRecord',
+                                    params)
+        if raw:
+            return results
+        return int(results.find('rid').text)
+
     def run_import(self, dbid, import_id, raw=False):
         params = {'ticket': self.ticket,
                   'id': import_id
