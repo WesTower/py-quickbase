@@ -215,10 +215,19 @@ class Connection(object):
         results = _execute_api_call(self.url+'db/'+dbid, 'API_ImportFromCSV', params)
         if raw:
             return results
-        return {'num_recs_added': int(results.find('num_recs_added').text),
-                'num_recs_input': int(results.find('num_recs_input').text),
-                'num_recs_updated': int(results.find('num_recs_updated').text),
-                'records': [(int(record.text), record.attrs['update_id']) for record in results.find_all('rid')]}
+        else:
+			try:
+				num_recs_added = int(results.find('num_recs_added').text)
+			except AttributeError:
+				num_recs_added = 0
+			try:
+				num_recs_updated = int(results.find('num_recs_updated').text)
+			except AttributeError:
+				num_recs_updated = 0
+			return {'num_recs_added': num_recs_added,
+					'num_recs_input': int(results.find('num_recs_input').text),
+					'num_recs_updated': num_recs_updated,
+					'records': [(int(record.text), record.attrs['update_id']) for record in results.find_all('rid')]}
     
     def download(self, dbid, rid, fid, vid="0"):
         url = '%sup/%s/a/r%s/e%s/v%s?ticket=%s&apptoken=%s' % (self.url, dbid, rid, fid, vid, self.ticket, self.apptoken)
