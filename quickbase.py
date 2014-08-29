@@ -34,7 +34,7 @@ class Connection(object):
         query ID.  If RAW is specified, return the raw BeautifulSoup
         XML node structure, otherwise return a list of QuickBaseRecords.
         If Quickbase returns a 'query too large' error, split the query
-        in half and try again until the """
+        in half and try again, rebuilding the partial queries back up"""
         params = {'ticket':self.ticket}
         if self.apptoken:
             params['apptoken'] = self.apptoken
@@ -55,9 +55,13 @@ class Connection(object):
                 params['slist'] = str(slist)
         if options:
             if type(options) == dict:
-                params['options'] = '.'.join('%s-%s' % (k,v) for k,v in options.items() if k != 'onlynew')
+                option_list = []
                 if 'onlynew' in options:
-                    params['options'] += ".onlynew"
+                    option_list.append('onlynew')
+                if 'nosort' in options:
+                    option_list.append('nosort')
+                option_list.extend(['%s-%s' % (k, v) for k, v in options.items() if k not in option_list])
+                params['options'] = '.'.join(option_list)
             else:
                 raise Exception("You passed a %s for options instead of a dict" % type(options))
         results = []
@@ -371,6 +375,7 @@ def _execute_raw_api_call(url, api_call, parameters):
                                        })
     #consider a @retry decorator to had some robustness again random network errors
     response = urllib2.urlopen(request)
+    print response
     return response.readlines()
 
 
