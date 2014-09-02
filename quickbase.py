@@ -375,7 +375,6 @@ def _execute_raw_api_call(url, api_call, parameters):
                                        })
     #consider a @retry decorator to had some robustness again random network errors
     response = urllib2.urlopen(request)
-    print response
     return response.readlines()
 
 
