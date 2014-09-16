@@ -250,6 +250,123 @@ class Connection(object):
         url = '%sup/%s/a/r%s/e%s/v%s?ticket=%s&apptoken=%s' % (self.url, dbid, rid, fid, vid, self.ticket, self.apptoken)
         return urllib2.urlopen(url)
 
+    def get_schema(self, dbid, raw=False):
+        params = {'ticket': self.ticket}
+        if self.apptoken:
+            params['apptoken'] = self.apptoken
+        results = _execute_api_call(self.url+'db/'+dbid, 'API_GetSchema', params)
+
+        table_results = results.table
+
+        if raw == False:
+            dict_schema = {}
+            for header in table_results.children:
+                if header.name == 'name':
+                    dict_schema['name'] = header.text
+                    dict_schema['dbid'] = dbid
+                elif header.name == 'original':
+                    orig_dict = {originals.name: originals.string for originals in header.findChildren()}
+                    dict_schema['original'] = QuickBaseRecord(orig_dict)
+                elif header.name == 'variables':
+                    var_dict = {}
+                    for vars in header.findChildren('variables'):
+                        vars_attrs = {attribute: str(vars.attrs[attribute]) for attribute in vars.attrs}
+                        vars_dict = {tag.name: str(tag.text) for tag in vars.findChildren()}
+                        vars_dict.update(vars_attrs)
+                        var_dict = QuickBaseRecord(vars_dict)
+                    dict_schema['variables'] = QuickBaseRecord(var_dict)
+                elif header.name == 'queries':
+                    child_queries = {}
+                    for query in header.findChildren('query'):
+                        attr_dict = {attribute: str(query.attrs[attribute]) for attribute in query.attrs}
+                        try:
+                            query_dict = {tag.name: str(tag.text) for tag in query.findChildren()}
+                        except UnicodeEncodeError:
+                            query_dict = {tag.name: tag.text for tag in query.findChildren()}
+                        query_dict.update(attr_dict)
+                        if query_dict['qytype'] != 'chart':
+                            if child_queries.has_key(query_dict['qyname']):
+                                if type(child_queries[query_dict['qyname']]) == dict:
+                                    temp_store = [child_queries[query_dict['qyname']][thing] for thing in child_queries[query_dict['qyname']]]
+                                else:
+                                    temp_store = [child_queries[query_dict['qyname']]]
+                                temp_dict = {repeats.id: repeats for repeats in temp_store}
+                                to_add = {query_dict['id']: QuickBaseRecord(query_dict)}
+                                temp_dict.update(to_add)
+                                child_queries[query_dict['qyname']] = temp_dict
+                            else:
+                                child_queries[query_dict['qyname']] = QuickBaseRecord(query_dict)
+                        dict_schema['queries'] = QuickBaseRecord(child_queries)
+                elif header.name == 'fields':
+                    field_dict = {}
+                    for field in header.find_all('field'):
+                        field_attrs = {attribute: str(field.attrs[attribute]) for attribute in field.attrs}
+                        try:
+                            field_info = {tag.name: str(tag.text) for tag in field.findChildren()}
+                        except UnicodeEncodeError:
+                            field_info = {tag.name: tag.text for tag in field.findChildren()}
+                        field_info.update(field_attrs)
+                        field_dict[field_info['label']] = QuickBaseRecord(field_info)
+                    dict_schema['fields'] = QuickBaseRecord(field_dict)
+            table_data = TableInfo(QuickBaseRecord(dict_schema))
+            return table_data
+        else:
+            return table_results
+
+
+class TableInfo(object):
+    """dict like object which stores table schema data
+    as a combination of QuickBaseRecord objects and dicts.
+    field information can be accessed as INSTANCE.fields['Human Readable Name'].id
+    """
+
+    def __init__(self, table_data):
+        self._table_data = table_data
+
+    @property
+    def name(self):
+        return str(self._table_data.name)
+
+    @property
+    def dbid(self):
+        return self._table_data.dbid
+
+    @property
+    def original(self):
+        return self._table_data.original
+
+    @property
+    def variables(self):
+        try:
+            return self._table_data.variables
+        except KeyError:
+            return None
+
+    @property
+    def fields(self):
+        return self._table_data.fields
+
+    @property
+    def _name_fid_dict(self):
+        return {self.fields[field].label: self.fields[field].id for field in self.fields}
+
+    def names_from_fids(self, fids):
+        temp_dict = {}
+        check_dict = {}
+        for field in self.fields:
+            check_dict[self.fields[field].id] = self.fields[field].label
+        for id in fids:
+            temp_dict[id] = check_dict[id]
+        return temp_dict
+
+    def build_clist(self, field_names):
+        fid_list = [self._name_fid_dict[name] for name in field_names]
+        joiner = '.'
+        clist = joiner.join(fid_list)
+        return clist
+
+
+
 class QuickBaseRecord(object):
     """Simple dict-like object which may be accessed as
     INSTANCE['record_id_'] or as INSTANCE.record_id_.  Implements
