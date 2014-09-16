@@ -28,7 +28,7 @@ class Connection(object):
         self.apptoken = apptoken
         return
 
-    def do_query(self, dbid, query=None, clist=None, slist=None, options={}, raw=False):
+    def do_query(self, dbid, query=None, clist=None, slist=None, fmt=None, options={}, raw=False):
         """Execute API_DoQuery against the current QuickBase
         connection.  QUERY may be either a string query or an integer
         query ID.  If RAW is specified, return the raw BeautifulSoup
@@ -53,6 +53,11 @@ class Connection(object):
                 params['slist'] = '.'.join([str(fid) for fid in slist])
             elif type(slist) in (str, int):
                 params['slist'] = str(slist)
+        if fmt:
+            if fmt == 'structured':
+                params['fmt'] = 'structured'
+            else:
+                raise Exception("You passed something other than 'structured'")
         if options:
             if type(options) == dict:
                 option_list = []
@@ -70,7 +75,11 @@ class Connection(object):
                                        'API_DoQuery',
                                        params)
             # by default, return a list of live QuickBaseRecords
-            results += [QuickBaseRecord(dict((field.name, field.text) for field in record.findChildren())) for record in result.find_all('record')]
+            if fmt == 'structured':
+                field_dict = {str(field.attrs['id']): str(field.label.text) for field in result.table.find_all('field')}
+                results += [QuickBaseRecord(dict((self.match_fid(field_dict, field), str(field.text)) for field in record.findChildren())) for record in result.find_all('record')]
+            else:
+                results += [QuickBaseRecord(dict((field.name, field.text) for field in record.findChildren())) for record in result.find_all('record')]
         except QuickBaseException as error:
             # If QuickBase returns a 'Request too large' error, 
             # then divide the last requested count in half and try again.
@@ -98,6 +107,12 @@ class Connection(object):
 
         return results
     
+    def match_fid(self, field_dict, field):
+        if field.attrs.has_key('id'):
+            return field_dict[str(field.attrs['id'])]
+        else:
+            return field.name
+
     def do_query_count(self, dbid, query=None, raw=False):
         """QUERY is either a string indicating a query or an integer
         query ID."""
@@ -364,7 +379,10 @@ class TableInfo(object):
         joiner = '.'
         clist = joiner.join(fid_list)
         return clist
-
+    
+    def fids_as_int(self, field_names):
+        fid_dict = {name: int(self._name_fid_dict[name]) for name in field_names}
+        return fid_dict
 
 
 class QuickBaseRecord(object):
