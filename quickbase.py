@@ -28,7 +28,7 @@ class Connection(object):
         self.apptoken = apptoken
         return
 
-    def do_query(self, dbid, query=None, clist=None, slist=None, fmt=None, options={}, raw=False):
+    def do_query(self, dbid, query=None, clist=None, slist=None, options={}, raw=False, fmt=None):
         """Execute API_DoQuery against the current QuickBase
         connection.  QUERY may be either a string query or an integer
         query ID.  If RAW is specified, return the raw BeautifulSoup
@@ -54,8 +54,8 @@ class Connection(object):
             elif type(slist) in (str, int):
                 params['slist'] = str(slist)
         if fmt:
-            if fmt == 'structured':
-                params['fmt'] = 'structured'
+            if str(fmt) == 'structured':
+                params['fmt'] = str(fmt)
             else:
                 raise Exception("You passed something other than 'structured'")
         if options:
@@ -75,9 +75,9 @@ class Connection(object):
                                        'API_DoQuery',
                                        params)
             # by default, return a list of live QuickBaseRecords
-            if fmt == 'structured':
-                field_dict = {str(field.attrs['id']): str(field.label.text) for field in result.table.find_all('field')}
-                results += [QuickBaseRecord(dict((self.match_fid(field_dict, field), str(field.text)) for field in record.findChildren())) for record in result.find_all('record')]
+            if str(fmt) == 'structured':
+                field_dict = {field.attrs['id']: field.label.text for field in result.table.find_all('field')}
+                results += [QuickBaseRecord(dict((self._match_fid(field_dict, field), field.text) for field in record.findChildren())) for record in result.find_all('record')]
             else:
                 results += [QuickBaseRecord(dict((field.name, field.text) for field in record.findChildren())) for record in result.find_all('record')]
         except QuickBaseException as error:
@@ -107,9 +107,9 @@ class Connection(object):
 
         return results
     
-    def match_fid(self, field_dict, field):
+    def _match_fid(self, field_dict, field):
         if field.attrs.has_key('id'):
-            return field_dict[str(field.attrs['id'])]
+            return field_dict[field.attrs['id']]
         else:
             return field.name
 
@@ -285,19 +285,16 @@ class Connection(object):
                 elif header.name == 'variables':
                     var_dict = {}
                     for vars in header.findChildren('variables'):
-                        vars_attrs = {attribute: str(vars.attrs[attribute]) for attribute in vars.attrs}
-                        vars_dict = {tag.name: str(tag.text) for tag in vars.findChildren()}
+                        vars_attrs = {attribute: vars.attrs[attribute] for attribute in vars.attrs}
+                        vars_dict = {tag.name: tag.text for tag in vars.findChildren()}
                         vars_dict.update(vars_attrs)
                         var_dict = QuickBaseRecord(vars_dict)
                     dict_schema['variables'] = QuickBaseRecord(var_dict)
                 elif header.name == 'queries':
                     child_queries = {}
                     for query in header.findChildren('query'):
-                        attr_dict = {attribute: str(query.attrs[attribute]) for attribute in query.attrs}
-                        try:
-                            query_dict = {tag.name: str(tag.text) for tag in query.findChildren()}
-                        except UnicodeEncodeError:
-                            query_dict = {tag.name: tag.text for tag in query.findChildren()}
+                        attr_dict = {attribute: query.attrs[attribute] for attribute in query.attrs}
+                        query_dict = {tag.name: tag.text for tag in query.findChildren()}
                         query_dict.update(attr_dict)
                         if query_dict['qytype'] != 'chart':
                             if child_queries.has_key(query_dict['qyname']):
@@ -315,11 +312,8 @@ class Connection(object):
                 elif header.name == 'fields':
                     field_dict = {}
                     for field in header.find_all('field'):
-                        field_attrs = {attribute: str(field.attrs[attribute]) for attribute in field.attrs}
-                        try:
-                            field_info = {tag.name: str(tag.text) for tag in field.findChildren()}
-                        except UnicodeEncodeError:
-                            field_info = {tag.name: tag.text for tag in field.findChildren()}
+                        field_attrs = {attribute: field.attrs[attribute] for attribute in field.attrs}
+                        field_info = {tag.name: tag.text for tag in field.findChildren()}
                         field_info.update(field_attrs)
                         field_dict[field_info['label']] = QuickBaseRecord(field_info)
                     dict_schema['fields'] = QuickBaseRecord(field_dict)
@@ -330,8 +324,7 @@ class Connection(object):
 
 
 class TableInfo(object):
-    """dict like object which stores table schema data
-    as a combination of QuickBaseRecord objects and dicts.
+    """data structure object that makes table schema data easily accessible
     field information can be accessed as INSTANCE.fields['Human Readable Name'].id
     """
 
@@ -340,7 +333,7 @@ class TableInfo(object):
 
     @property
     def name(self):
-        return str(self._table_data.name)
+        return self._table_data.name
 
     @property
     def dbid(self):
