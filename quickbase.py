@@ -48,14 +48,16 @@ class Connection(object):
                 params['clist'] = clist
             elif type(clist) == list:
                 params['clist'] = '.'.join(clist)
+            elif type(clist) == unicode:
+                params['clist'] = str(clist)
         if slist:
             if type(slist) in (list, tuple):
                 params['slist'] = '.'.join([str(fid) for fid in slist])
             elif type(slist) in (str, int):
                 params['slist'] = str(slist)
         if fmt:
-            if str(fmt) == 'structured':
-                params['fmt'] = str(fmt)
+            if fmt == 'structured':
+                params['fmt'] = fmt
             else:
                 raise Exception("You passed something other than 'structured'")
         if options:
@@ -93,11 +95,11 @@ class Connection(object):
                 new_options = options.copy()
                 new_options['num'] = new_count
                 new_options['skp'] = skp
-                results += self.do_query(dbid, query=query, clist=clist, slist=slist, options=new_options)
+                results += self.do_query(dbid, query=query, clist=clist, slist=slist, options=new_options, fmt=fmt)
                 skp += new_count # Increment skip to grab the second half
                 new_options['skp'] = skp
                 new_options['num'] = count - new_options['num']
-                results += self.do_query(dbid, query=query, clist=clist, slist=slist, options=new_options)
+                results += self.do_query(dbid, query=query, clist=clist, slist=slist, options=new_options, fmt=fmt)
                 skp += new_count
                 new_options['skp'] = skp
             else:
