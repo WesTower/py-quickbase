@@ -288,6 +288,13 @@ class Connection(object):
         _execute_api_call(self.url+'db/'+dbid, 'API_AddUserToRole', params)
         return
 
+    def remove_user_from_role(self, dbid, userid, roleid):
+        params = {'ticket': self.ticket, 'dbid': dbid, 'userid': userid, 'roleid': roleid}
+        if self.apptoken:
+            params['apptoken'] = self.apptoken
+        _execute_api_call(self.url+'db/'+dbid, 'API_RemoveUserFromRole', params)
+        return
+
                 
 class QuickBaseRecord(object):
     """Simple dict-like object which may be accessed as
