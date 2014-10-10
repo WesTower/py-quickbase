@@ -281,6 +281,13 @@ class Connection(object):
                                 for role in group.find('roles').find_all('role')]}
                         for group in results.find_all('group', {'type': 'group'})]}
 
+    def add_user_to_role(self, dbid, userid, roleid):
+        params = {'ticket': self.ticket, 'dbid': dbid, 'userid': userid, 'roleid': roleid}
+        if self.apptoken:
+            params['apptoken'] = self.apptoken
+        _execute_api_call(self.url+'db/'+dbid, 'API_AddUserToRole', params)
+        return
+
                 
 class QuickBaseRecord(object):
     """Simple dict-like object which may be accessed as
