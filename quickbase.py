@@ -249,7 +249,39 @@ class Connection(object):
     def download(self, dbid, rid, fid, vid="0"):
         url = '%sup/%s/a/r%s/e%s/v%s?ticket=%s&apptoken=%s' % (self.url, dbid, rid, fid, vid, self.ticket, self.apptoken)
         return urllib2.urlopen(url)
+    
+    def user_roles(self, dbid, raw=False):
+        params = {'ticket': self.ticket, 'dbid': dbid}
+        if self.apptoken:
+            params['apptoken'] = self.apptoken
+        results = _execute_api_call(self.url+'db/'+dbid, 'API_UserRoles', params)
+        if raw:
+            return results
+        else:
+            return {'users':
+                    [{'type': user.attrs['type'],
+                      'id': user.attrs['id'],
+                      'name': user.find('name').text,
+                      'last_access': user.find('lastAccess').text,
+                      'last_access_app_local': user.find('lastAccessAppLocal').text,
+                      'roles': [{'id': int(role.attrs['id']),
+                                 'name': role.find('name').text,
+                                 'access': [{'id': int(access.attrs['id']),
+                                             'name': access.text} for access in role.find_all('access')]}
+                               for role in user.find('roles').find_all('role')]}
+                      for user in results.find_all('user', {'type': 'user'})],
+                     'groups': 
+                        [{'type': group.attrs['type'],
+                        'id': group.attrs['id'],
+                        'name': group.find('name').text,
+                        'roles': [{'id': int(role.attrs['id']),
+                                    'name': role.find('name').text,
+                                    'access': [{'id': int(access.attrs['id']),
+                                                'name': access.text} for access in role.find_all('access')]}
+                                for role in group.find('roles').find_all('role')]}
+                        for group in results.find_all('group', {'type': 'group'})]}
 
+                
 class QuickBaseRecord(object):
     """Simple dict-like object which may be accessed as
     INSTANCE['record_id_'] or as INSTANCE.record_id_.  Implements
