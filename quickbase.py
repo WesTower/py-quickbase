@@ -485,7 +485,8 @@ class QuickBaseException(Exception):
         self.response = response
         self.errcode = response.errcode.string
         self.errtext = response.errtext.string
-        self.errdetail = response.errdetail.string
+        if response.errdetail:
+            self.errdetail = response.errdetail.string
    
 class QuickBaseRecordException(Exception):
     def __init__(self, message, record=None):
