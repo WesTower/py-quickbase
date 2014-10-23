@@ -5,6 +5,7 @@ A Pythonic interface to the QuickBase API.
 """
 
 import os
+import csv
 import logging
 import urllib2
 import json
