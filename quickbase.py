@@ -344,17 +344,18 @@ class Connection(object):
                         query_dict = {tag.name: tag.text for tag in query.findChildren()}
                         query_dict.update(attr_dict)
                         if query_dict['qytype'] != 'chart':
-                            if child_queries.has_key(query_dict['qyname']):
-                                if type(child_queries[query_dict['qyname']]) == dict:
-                                    temp_store = [child_queries[query_dict['qyname']][thing] for thing in child_queries[query_dict['qyname']]]
+                            if 'qyname' in query_dict:
+                                if child_queries.has_key(query_dict['qyname']):
+                                    if type(child_queries[query_dict['qyname']]) == dict:
+                                        temp_store = [child_queries[query_dict['qyname']][thing] for thing in child_queries[query_dict['qyname']]]
+                                    else:
+                                        temp_store = [child_queries[query_dict['qyname']]]
+                                    temp_dict = {repeats.id: repeats for repeats in temp_store}
+                                    to_add = {query_dict['id']: QuickBaseRecord(query_dict)}
+                                    temp_dict.update(to_add)
+                                    child_queries[query_dict['qyname']] = temp_dict
                                 else:
-                                    temp_store = [child_queries[query_dict['qyname']]]
-                                temp_dict = {repeats.id: repeats for repeats in temp_store}
-                                to_add = {query_dict['id']: QuickBaseRecord(query_dict)}
-                                temp_dict.update(to_add)
-                                child_queries[query_dict['qyname']] = temp_dict
-                            else:
-                                child_queries[query_dict['qyname']] = QuickBaseRecord(query_dict)
+                                    child_queries[query_dict['qyname']] = QuickBaseRecord(query_dict)
                         dict_schema['queries'] = QuickBaseRecord(child_queries)
                 elif header.name == 'fields':
                     field_dict = {}
@@ -381,6 +382,10 @@ class TableInfo(object):
     @property
     def name(self):
         return self._table_data.name
+    
+    @property
+    def queries(self):
+        return self._table_data.queries
 
     @property
     def dbid(self):
