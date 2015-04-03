@@ -42,40 +42,58 @@ Usage
 
    A connection represents a persistent QuickBase connection.
 
-   .. method:: do_query(self, dbid, [query=None, clist=None,
+   .. method:: do_query(dbid, [query=None, clist=None,
                slist=None, options={}, raw=False, fmt=None]):
 
-      Execute API_DoQuery, by default returning a list of
-      :class:`QuickBaseRecord`.  If the resulting reply is too big for
-      QuickBase to return, it will split the result set in half and
-      re-request, recursively.  This means that one shouldn't need to
-      worry about too-large queries as a matter of course; note that
-      it's more efficient to chunk the queries manually, as that will
-      eliminate superfluous failed requests.
+      Execute `API_DoQuery
+      <http://www.quickbase.com/api-guide/index.html#do_query.html>`_,
+      by default returning a list of :class:`QuickBaseRecord`.  If the
+      resulting reply is too big for QuickBase to return, it will
+      split the result set in half and re-request, recursively.  This
+      means that one shouldn't need to worry about too-large queries
+      as a matter of course; note that it's more efficient to chunk
+      the queries manually, as that will eliminate superfluous failed
+      requests.
 
-      *dbid* is a QuickBase database ID.
+      *dbid*
+         The QuickBase database ID.
 
-      With no *query*, :meth:`Connection.do_query()` will return all
-      records in *dbid*.
+      *query*
+         The QuickBase query to execute With no *query*,
+         :meth:`Connection.do_query()` will return all records in
+         *dbid*.
 
-      If *query* is an integer, then it represents a QuickBase query
-      ID; otherwise, it's a string, e.g. ``"{'7'.EX.'Foobar'}"``.
+         If *query* is an integer, then it represents a QuickBase
+         query ID; otherwise, it's a string,
+         e.g. ``"{'7'.EX.'Foobar'}"``.
 
-      *clist* is a QuickBase clist, i.e. a dot-delimited list of field
-      IDs, e.g. ``'3.7.42'``.  *slist* is similar, but indicates the
-      fields to sort by.
+      *clist*
+         A QuickBase clist, i.e. a dot-delimited list of field IDs,
+         e.g. ``'3.7.42'``.  *slist* is similar, but indicates the
+         fields to sort by.
 
-      *options* is a dict; it is turned into a QuickBase option string
-      via an arcane process (which is ripe for fixing).  If either
-      ``'onlynew'`` or ``'nosort'`` is present, *even if its
-      associated value is false*, then ``'onlynew'`` or ``'nosort'``,
-      respectively, will be inserted into the option string.  All
-      other keys and values will be inserted as hyphen-separated
-      pairs.
+      *options*
+         A dict representing the appropriate QuickBase options to
+         pass; it is turned into a QuickBase option string via an
+         arcane process (which is ripe for fixing).  If either
+         ``'onlynew'`` or ``'nosort'`` is present, *even if its
+         associated value is false*, then ``'onlynew'`` or
+         ``'nosort'``, respectively, will be inserted into the option
+         string.  All other keys and values will be inserted as
+         hyphen-separated pairs.
 
-      If *raw* is true, then :meth:`Connection.do_query()` returns
-      the complete XML node structure as parsed by BeautifulSoup from
-      the QuickBase response.
+      *raw*
+         If true, then :meth:`Connection.do_query()` returns the
+         complete XML node structure as parsed by BeautifulSoup from
+         the QuickBase response.
+
+   .. method:: do_query_count(dbid, query=None, raw=False):
+
+      Execute `API_DoQueryCount
+      <http://www.quickbase.com/api-guide/index.html#do_query_count.html>`_,
+      by default returning an integer indicating the number of records
+      which would be returned by *query*.  If *raw* is true, then the
+      raw node tree will be returned instead.
 
 .. class:: File(filename, data)
 
