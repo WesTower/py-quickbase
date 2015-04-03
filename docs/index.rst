@@ -120,7 +120,26 @@ Usage
       the record, unless *raw* is ``True``, in which case the raw XML
       node tree of the response will be returned instead.  *values* is
       a dict in the same format as *record* as for
-      :meth:`Connection.add_record()`.
+      :meth:`Connection.edit_record()`.
+
+   .. method:: run_import(dbid, import_id, raw=False):
+
+      Execute `API_RunImport
+      <http://www.quickbase.com/api-guide/index.html#runimport.html>`_
+      to run a saved table-to-table import in Quickbase identified by
+      *import_id*, returning the *import_status*, unless *raw* is
+      ``True``, in which case the raw XML node tree of the response
+      will be returned instead.
+      :meth:`Connection.run_import()`.
+
+   .. method:: download(dbid, rid, fid, vid="0"):
+
+      http://quickbase.intuit.com/developer/articles/downloading-files>`_
+      to download an attached file in the Quickbase table identified
+      by *dbid*, for the record ID *rid*, field ID *fid* and verion
+      ID *vid*, where the default version ID of "0" downloads the
+      latest version.
+      :meth:`Connection.download()`.
 
    .. method:: delete_record(dbid, record_id, raw=False):
 
