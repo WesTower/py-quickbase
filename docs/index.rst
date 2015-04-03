@@ -85,7 +85,9 @@ Usage
       *raw*
          If ``True``, then :meth:`Connection.do_query()` returns the
          complete XML node structure as parsed by BeautifulSoup from
-         the QuickBase response.
+         the QuickBase response.  One should not normally need to do
+         this, but it does come in handy sometimes when debugging
+         particularly hairy issues.
 
    .. method:: do_query_count(dbid, query=None, raw=False):
 
@@ -119,6 +121,47 @@ Usage
       node tree of the response will be returned instead.  *values* is
       a dict in the same format as *record* as for
       :meth:`Connection.add_record()`.
+
+   .. method:: delete_record(dbid, record_id, raw=False):
+
+      Execute `API_DeleteRecord
+      <http://www.quickbase.com/api-guide/index.html#delete_record.html>`_
+      to delete record ID *record_id* from QuickBase table *dbid*,
+      returning the record ID of the deleted record, unless *raw* is
+      ``True``, in which case the raw XML node tree of the response
+      will be returned instead.
+
+   .. method:: import_from_csv(dbid, csv_file, clist, encoding='utf-8', skipfirst=True, raw=False, split=5000):
+
+      Execute `API_ImportFromCSV
+      <http://www.quickbase.com/api-guide/index.html#importfromcsv.html>`_
+      to add or update records in QuickBase table *dbid*, by default
+      returning a dict with the keys `num_recs_added`,
+      `num_recs_input`, `num_recs_updated` and `records`; the first
+      three are all integers and the last is a list of (record ID,
+      update ID) tuples.  If *raw* is ``True``, then the raw XML node
+      tree of the response will be returned instead.
+
+      Since QuickBase can choke on too-large imports, *split*
+      indicates how many records at a time should be uploaded.  Across
+      the data we've normally been importing, 5,000 was a decent
+      number; YMMV.
+
+      *csv_file*
+         An open file-like object to be passed to :func:`csv.reader()`.
+
+      *clist*
+         A standard QuickBase column list, used to indicate which
+         fields are to be imported.
+
+      *encoding*
+         A Python encoding string (e.g. 'utf-8') used to decode the
+         data after it's read in by :meth:`csv.reader.readlines()`.
+
+      *skipfirst*
+         Whether the first row of data in the CSV file should be
+         skipped.  Should be set to ``False`` if one's CSV doesn't
+         have a header line.
 
 .. class:: File(filename, data)
 
