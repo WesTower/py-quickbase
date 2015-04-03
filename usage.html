@@ -1,0 +1,378 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Usage &mdash; py-quickbase 1.0 documentation</title>
+    
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="py-quickbase 1.0 documentation" href="index.html" />
+    <link rel="next" title="License" href="license.html" />
+    <link rel="prev" title="Introduction" href="intro.html" />
+   
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9">
+
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="license.html" title="License"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="intro.html" title="Introduction"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">py-quickbase 1.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="usage">
+<h1>Usage<a class="headerlink" href="#usage" title="Permalink to this headline">¶</a></h1>
+<dl class="function">
+<dt id="connect">
+<code class="descname">connect</code><span class="sig-paren">(</span><em>url</em>, <em>username</em>, <em>password</em><span class="optional">[</span>, <em>apptoken=None</em>, <em>hours=4</em><span class="optional">]</span><span class="sig-paren">)</span><a class="headerlink" href="#connect" title="Permalink to this definition">¶</a></dt>
+<dd><p>Connect to the QuickBase instance at <em>url</em> with the specified
+<em>username</em> &amp; <em>password</em>.  <em>apptoken</em> is stored in the connection
+for future use, but is <em>not</em> validated against the QuickBase
+application.  If <em>hours</em> is given, then request that the returned
+ticket be valid for that many hours.  Returns an instance of the
+<a class="reference internal" href="#Connection" title="Connection"><code class="xref py py-class docutils literal"><span class="pre">Connection</span></code></a> class.</p>
+<div class="admonition warning">
+<p class="first admonition-title">Warning</p>
+<p class="last"><em>url</em> should be of the form &#8216;<a class="reference external" href="https://example.quickbase.com/">https://example.quickbase.com/</a>&#8216;;
+future enhancement should use a URL library to Do the Right
+Thing.</p>
+</div>
+</dd></dl>
+
+<dl class="class">
+<dt id="Connection">
+<em class="property">class </em><code class="descname">Connection</code><a class="headerlink" href="#Connection" title="Permalink to this definition">¶</a></dt>
+<dd><p>A <a class="reference internal" href="#Connection" title="Connection"><code class="xref py py-class docutils literal"><span class="pre">Connection</span></code></a> represents a persistent QuickBase connection.</p>
+<dl class="method">
+<dt>
+<code class="descname">do_query(dbid, [query=None, clist=None,</code></dt>
+<dt>
+<code class="descname">slist=None, options={}, raw=False, fmt=None]):</code></dt>
+<dd><p>Execute <a class="reference external" href="http://www.quickbase.com/api-guide/index.html#do_query.html">API_DoQuery</a>,
+by default returning a list of <a class="reference internal" href="#QuickBaseRecord" title="QuickBaseRecord"><code class="xref py py-class docutils literal"><span class="pre">QuickBaseRecord</span></code></a>.  If the
+resulting reply is too big for QuickBase to return, it will
+split the result set in half and re-request, recursively.  This
+means that one shouldn&#8217;t need to worry about too-large queries
+as a matter of course; note that it&#8217;s more efficient to chunk
+the queries manually, as that will eliminate superfluous failed
+requests.</p>
+<p><em>dbid</em></p>
+<blockquote>
+<div>The QuickBase database ID.</div></blockquote>
+<p><em>query</em></p>
+<blockquote>
+<div><p>The QuickBase query to execute With no <em>query</em>,
+<code class="xref py py-meth docutils literal"><span class="pre">Connection.do_query()</span></code> will return all records in
+<em>dbid</em>.</p>
+<p>If <em>query</em> is an integer, then it represents a QuickBase
+query ID; otherwise, it&#8217;s a string,
+e.g. <code class="docutils literal"><span class="pre">&quot;{'7'.EX.'Foobar'}&quot;</span></code>.</p>
+</div></blockquote>
+<p><em>clist</em></p>
+<blockquote>
+<div>A QuickBase clist, i.e. a dot-delimited list of field IDs,
+e.g. <code class="docutils literal"><span class="pre">'3.7.42'</span></code>.  <em>slist</em> is similar, but indicates the
+fields to sort by.</div></blockquote>
+<p><em>options</em></p>
+<blockquote>
+<div>A dict representing the appropriate QuickBase options to
+pass; it is turned into a QuickBase option string via an
+arcane process (which is ripe for fixing).  If either
+<code class="docutils literal"><span class="pre">'onlynew'</span></code> or <code class="docutils literal"><span class="pre">'nosort'</span></code> is present, <em>even if its
+associated value is false</em>, then <code class="docutils literal"><span class="pre">'onlynew'</span></code> or
+<code class="docutils literal"><span class="pre">'nosort'</span></code>, respectively, will be inserted into the option
+string.  All other keys and values will be inserted as
+hyphen-separated pairs.</div></blockquote>
+<p><em>raw</em></p>
+<blockquote>
+<div>If <code class="docutils literal"><span class="pre">True</span></code>, then <code class="xref py py-meth docutils literal"><span class="pre">Connection.do_query()</span></code> returns the
+complete XML node structure as parsed by BeautifulSoup from
+the QuickBase response.  One should not normally need to do
+this, but it does come in handy sometimes when debugging
+particularly hairy issues.</div></blockquote>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<code class="descname">do_query_count(dbid, query=None, raw=False):</code></dt>
+<dd><p>Execute <a class="reference external" href="http://www.quickbase.com/api-guide/index.html#do_query_count.html">API_DoQueryCount</a>,
+by default returning an integer indicating the number of records
+which would be returned by <em>query</em>.  If <em>raw</em> is <code class="docutils literal"><span class="pre">True</span></code>, then the
+raw XML node tree of the response will be returned instead.</p>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<code class="descname">add_record(dbid, record, raw=false):</code></dt>
+<dd><p>execute <a class="reference external" href="http://www.quickbase.com/api-guide/index.html#add_record.html">api_addrecord</a>
+to add a new record to the quickbase table identified by <em>dbid</em>,
+returning a tuple containing the record id and update id of the
+new record, unless <em>raw</em> is <code class="docutils literal"><span class="pre">true</span></code>, in which case the raw xml
+node tree of the response will be returned instead.</p>
+<p><em>record</em> is a dict.  the keys are either integer field ids or
+string field names.  the values are either string data or
+<a class="reference internal" href="#File" title="File"><code class="xref py py-class docutils literal"><span class="pre">File</span></code></a> instances.</p>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<code class="descname">edit_record(dbid, record_id, values, raw=False):</code></dt>
+<dd><p>Execute <a class="reference external" href="http://www.quickbase.com/api-guide/index.html#edit_record.html">API_EditRecord</a>
+to edit an existing record with the record ID <em>record_id</em> in the
+QuickBase table identified by <em>dbid</em>, returning a tuple
+containing the number of fields changed and the new update ID of
+the record, unless <em>raw</em> is <code class="docutils literal"><span class="pre">True</span></code>, in which case the raw XML
+node tree of the response will be returned instead.  <em>values</em> is
+a dict in the same format as <em>record</em> as for
+<code class="xref py py-meth docutils literal"><span class="pre">Connection.edit_record()</span></code>.</p>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<code class="descname">delete_record(dbid, record_id, raw=False):</code></dt>
+<dd><p>Execute <a class="reference external" href="http://www.quickbase.com/api-guide/index.html#delete_record.html">API_DeleteRecord</a>
+to delete record ID <em>record_id</em> from QuickBase table <em>dbid</em>,
+returning the record ID of the deleted record, unless <em>raw</em> is
+<code class="docutils literal"><span class="pre">True</span></code>, in which case the raw XML node tree of the response
+will be returned instead.</p>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<code class="descname">run_import(dbid, import_id, raw=False):</code></dt>
+<dd><p>Execute <a class="reference external" href="http://www.quickbase.com/api-guide/index.html#runimport.html">API_RunImport</a>
+to run a saved table-to-table import in Quickbase identified by
+<em>import_id</em>, returning the <em>import_status</em>, unless <em>raw</em> is
+<code class="docutils literal"><span class="pre">True</span></code>, in which case the raw XML node tree of the response
+will be returned instead.
+<code class="xref py py-meth docutils literal"><span class="pre">Connection.run_import()</span></code>.</p>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<code class="descname">import_from_csv(dbid, csv_file, clist, encoding='utf-8', skipfirst=True, raw=False, split=5000):</code></dt>
+<dd><p>Execute <a class="reference external" href="http://www.quickbase.com/api-guide/index.html#importfromcsv.html">API_ImportFromCSV</a>
+to add or update records in QuickBase table <em>dbid</em>, by default
+returning a dict with the keys <cite>num_recs_added</cite>,
+<cite>num_recs_input</cite>, <cite>num_recs_updated</cite> and <cite>records</cite>; the first
+three are all integers and the last is a list of (record ID,
+update ID) tuples.  If <em>raw</em> is <code class="docutils literal"><span class="pre">True</span></code>, then the raw XML node
+tree of the response will be returned instead.</p>
+<p>Since QuickBase can choke on too-large imports, <em>split</em>
+indicates how many records at a time should be uploaded.  Across
+the data we&#8217;ve normally been importing, 5,000 was a decent
+number; YMMV.</p>
+<p><em>csv_file</em></p>
+<blockquote>
+<div>An open file-like object to be passed to <code class="xref py py-func docutils literal"><span class="pre">csv.reader()</span></code>.</div></blockquote>
+<p><em>clist</em></p>
+<blockquote>
+<div>A standard QuickBase column list, used to indicate which
+fields are to be imported.</div></blockquote>
+<p><em>encoding</em></p>
+<blockquote>
+<div>A Python encoding string (e.g. &#8216;utf-8&#8217;) used to decode the
+data after it&#8217;s read in by <code class="xref py py-meth docutils literal"><span class="pre">csv.reader.readlines()</span></code>.</div></blockquote>
+<p><em>skipfirst</em></p>
+<blockquote>
+<div>Whether the first row of data in the CSV file should be
+skipped.  Should be set to <code class="docutils literal"><span class="pre">False</span></code> if one&#8217;s CSV doesn&#8217;t
+have a header line.</div></blockquote>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<code class="descname">download(dbid, rid, fid, vid=&quot;0&quot;):</code></dt>
+<dd><p><a class="reference external" href="http://quickbase.intuit.com/developer/articles/downloading-files">http://quickbase.intuit.com/developer/articles/downloading-files</a>&gt;`_
+to download an attached file in the Quickbase table identified
+by <em>dbid</em>, for the record ID <em>rid</em>, field ID <em>fid</em> and verion
+ID <em>vid</em>, where the default version ID of &#8220;0&#8221; downloads the
+latest version.
+<code class="xref py py-meth docutils literal"><span class="pre">Connection.download()</span></code>.</p>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<code class="descname">user_roles(dbid, raw=False):</code></dt>
+<dd><p>Execute <a class="reference external" href="http://www.quickbase.com/api-guide/index.html#userroles.html">API_UserRoles</a>
+to request the list of users and their roles in the QuickBase
+application identified by <em>dbid</em>, returning a list of users as
+dicts. If <em>raw</em> is <code class="docutils literal"><span class="pre">True</span></code>, then the raw XML node tree of the
+reponse will be returned instead.
+<code class="xref py py-meth docutils literal"><span class="pre">Connection.edit_record()</span></code>.</p>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<code class="descname">add_user_to_role(dbid, userid, roleid):</code></dt>
+<dd><p>Execute <a class="reference external" href="http://www.quickbase.com/api-guide/index.html#add_user_to_role.html">API_AddUserToRole</a>
+to add a user with ID <em>userid</em> to the role with ID <em>roleid</em> for
+the Quickbase application identified by <em>dbid</em>.
+<code class="xref py py-meth docutils literal"><span class="pre">Connection.add_user_to_role()</span></code>.</p>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<code class="descname">remove_user_from_role(dbid, userid, roleid):</code></dt>
+<dd><p>Execute <a class="reference external" href="http://www.quickbase.com/api-guide/index.html#removeuserfromrole.html">API_RemoveUserFromRole</a>
+to remove a user with ID <em>userid</em> from the role with ID <em>roleid</em> for
+the Quickbase application identified by <em>dbid</em>.
+<code class="xref py py-meth docutils literal"><span class="pre">Connection.remove_user_to_role()</span></code>.</p>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<code class="descname">get_schema(dbid, [raw=False]):</code></dt>
+<dd><p>Execute <a class="reference external" href="http://www.quickbase.com/api-guide/index.html#getschema.html">API_GetSchema</a>,
+returning a <a class="reference internal" href="#TableInfo" title="TableInfo"><code class="xref py py-class docutils literal"><span class="pre">TableInfo</span></code></a> object associated with QuickBase
+table <em>dbid</em>.  <code class="xref py py-meth docutils literal"><span class="pre">Connection.get_schema()</span></code> can be given a
+<em>dbid</em> pointing to a single table or a full app. If the <em>dbid</em>
+passed is a table, the response will contain a list of fields,
+among other info. If the <em>dbid</em> passed is an app, the response
+will contain a list of chdbids (child dbids), but will not be
+useful as a <a class="reference internal" href="#TableInfo" title="TableInfo"><code class="xref py py-class docutils literal"><span class="pre">TableInfo</span></code></a> object, and thus must be given
+<em>raw</em> = <code class="docutils literal"><span class="pre">True</span></code> if the intent is to access the chdbid info.</p>
+<p><em>dbid</em></p>
+<blockquote>
+<div>The QuickBase database ID.</div></blockquote>
+<p><em>raw</em></p>
+<blockquote>
+<div>If <code class="docutils literal"><span class="pre">True</span></code>, then <code class="xref py py-meth docutils literal"><span class="pre">Connection.get_schema()</span></code> returns the
+complete XML node structure as parsed by BeautifulSoup from
+the QuickBase response.</div></blockquote>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="TableInfo">
+<em class="property">class </em><code class="descname">TableInfo</code><a class="headerlink" href="#TableInfo" title="Permalink to this definition">¶</a></dt>
+<dd><p>A representation of the QuickBase table that makes schema data
+easily accessible.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="QuickBaseRecord">
+<em class="property">class </em><code class="descname">QuickBaseRecord</code><a class="headerlink" href="#QuickBaseRecord" title="Permalink to this definition">¶</a></dt>
+<dd><p>A <a class="reference internal" href="#QuickBaseRecord" title="QuickBaseRecord"><code class="xref py py-class docutils literal"><span class="pre">QuickBaseRecord</span></code></a> represents a single QuickBase record.
+It&#8217;s a dict-like object which allows accessing fields as both items
+and attributes, although it doesn&#8217;t implement <code class="xref py py-meth docutils literal"><span class="pre">iterkeys()</span></code>.
+Each QuickBase field is accessible with its field label,
+e.g. <code class="docutils literal"><span class="pre">record.record_id_</span></code> or <code class="docutils literal"><span class="pre">record['record_id_']</span></code> will both be
+the &#8216;Record Id#&#8217; field.  There is also a special field _fields,
+which records the record&#8217;s data.</p>
+<div class="admonition warning">
+<p class="first admonition-title">Warning</p>
+<p class="last">QuickBase allows the definition of multiple fields with
+different names but the same label, e.g. two fields named
+<code class="samp docutils literal"><span class="pre">foo+</span></code> and <code class="samp docutils literal"><span class="pre">foo*</span></code> will have the same label <code class="samp docutils literal"><span class="pre">foo_</span></code>.
+<a class="reference internal" href="#QuickBaseRecord" title="QuickBaseRecord"><code class="xref py py-class docutils literal"><span class="pre">QuickBaseRecord</span></code></a> does not support this.  A future
+enhancement should allow accessing fields by name as well as
+label using the dict-like syntax.</p>
+</div>
+</dd></dl>
+
+<dl class="class">
+<dt id="File">
+<em class="property">class </em><code class="descname">File</code><span class="sig-paren">(</span><em>filename</em>, <em>data</em><span class="sig-paren">)</span><a class="headerlink" href="#File" title="Permalink to this definition">¶</a></dt>
+<dd><p>Files have to be uploaded to QuickBase specially.  The path of least
+resistance was create a special class whose instance are recognized
+by <code class="xref py py-meth docutils literal"><span class="pre">Connection:add_record()</span></code> and
+<code class="xref py py-meth docutils literal"><span class="pre">Connection:edit_record()</span></code>.  Use by attaching it as one of
+the values in an add or edit dict.</p>
+<p><em>filename</em> is the filename as it will appear in QuickBase.</p>
+<p><em>data</em> is a string containing the contents of the file, as they
+will be uploaded to QuickBase.</p>
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="intro.html"
+                        title="previous chapter">Introduction</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="license.html"
+                        title="next chapter">License</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/usage.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2012-2014 WesTower Communications, 2014-2015 MasTec.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.3.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.3</a>
+      
+      |
+      <a href="_sources/usage.txt"
+          rel="nofollow">Page source</a></li>
+    </div>
+
+    
+
+    
+  </body>
+</html>
