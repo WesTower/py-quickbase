@@ -45,7 +45,13 @@ Usage
    .. method:: do_query(self, dbid, [query=None, clist=None,
                slist=None, options={}, raw=False, fmt=None]):
 
-      Execute API_DoQuery, by default returning a list of :class:`QuickBaseRecord`.
+      Execute API_DoQuery, by default returning a list of
+      :class:`QuickBaseRecord`.  If the resulting reply is too big for
+      QuickBase to return, it will split the result set in half and
+      re-request, recursively.  This means that one shouldn't need to
+      worry about too-large queries as a matter of course; note that
+      it's more efficient to chunk the queries manually, as that will
+      eliminate superfluous failed requests.
 
       *dbid* is a QuickBase database ID.
 
