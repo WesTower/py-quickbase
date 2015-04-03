@@ -40,7 +40,7 @@ Usage
 
 .. class:: Connection
 
-   A connection represents a persistent QuickBase connection.
+   A :class:`Connection` represents a persistent QuickBase connection.
 
    .. method:: do_query(dbid, [query=None, clist=None,
                slist=None, options={}, raw=False, fmt=None]):
@@ -181,6 +181,25 @@ Usage
       ID *vid*, where the default version ID of "0" downloads the
       latest version.
       :meth:`Connection.download()`.
+
+.. class:: QuickBaseRecord
+
+   A :class:`QuickBaseRecord` represents a single QuickBase record.
+   It's a dict-like object which allows accessing fields as both items
+   and attributes, although it doesn't implement :meth:`iterkeys()`.
+   Each QuickBase field is accessible with its field label,
+   e.g. ``record.record_id_`` or ``record['record_id_']`` will both be
+   the 'Record Id#' field.  There is also a special field _fields,
+   which records the record's data.
+
+   .. warning::
+
+      QuickBase allows the definition of multiple fields with
+      different names but the same label, e.g. two fields named
+      :samp:`foo+` and :samp:`foo*` will have the same label :samp:`foo_`.
+      :class:`QuickBaseRecord` does not support this.  A future
+      enhancement should allow accessing fields by name as well as
+      label using the dict-like syntax.
 
 .. class:: File(filename, data)
 
