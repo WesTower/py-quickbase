@@ -34,7 +34,6 @@
    usage
    license
 
-
 Indices and tables
 ==================
 
