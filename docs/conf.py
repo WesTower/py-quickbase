@@ -47,7 +47,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'py-quickbase'
-copyright = u'2015, Bob Uhl, Mike Safko, Aaron Scott, Martin Pedersen, Dan Pastusek et al.'
+copyright = u'2012-2014 WesTower Communications, 2014-2015 MasTec'
 author = u'Bob Uhl, Mike Safko, Aaron Scott, Martin Pedersen, Dan Pastusek et al.'
 
 # The version info for the project you're documenting, acts as replacement for
