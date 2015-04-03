@@ -192,6 +192,32 @@ Usage
       reponse will be returned instead.
       :meth:`Connection.edit_record()`.
 
+   .. method:: get_schema(dbid, [raw=False]):
+
+      Execute `API_GetSchema
+      <http://www.quickbase.com/api-guide/index.html#getschema.html>`_,
+      returning a :class:`TableInfo` object associated with your *dbid*.
+      :meth:`get_schema()` can be given a *dbid* pointing to
+      a single table or a full app. If the *dbid* passed is a table, the
+      response will contain a list of fields, among other info. If the
+      *dbid* passed is an app, the response will contain a list of chdbids (child dbids),
+      but will not be useful as a :class:`TableInfo` object, and thus
+      must be given  *raw* = ``True`` if the intent is to access the chdbid info.
+
+      *dbid*
+         The QuickBase database ID..
+
+      *raw*
+         If ``True``, then :meth:`get_schema()` returns the
+         complete XML node structure as parsed by BeautifulSoup from
+         the QuickBase response.
+
+
+
+.. class:: TableInfo
+
+   A representation of the quickbase table that makes schema data easily accessible.
+
 .. class:: File(filename, data)
 
    Files have to be uploaded to QuickBase specially.  The path of least

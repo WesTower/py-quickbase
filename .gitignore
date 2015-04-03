@@ -63,3 +63,7 @@ target/
 *.swn
 *.swo
 *.swp
+
+# IntelliJ IDE files
+.idea
+*.iml
