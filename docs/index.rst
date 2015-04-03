@@ -15,8 +15,6 @@
 .. moduleauthor:: Martin Pedersen <martin.pedersen@mastec.com>
 .. moduleauthor:: Dan Pastusek <dan.pastusek@mastec.com>
 
-Contents:
-
 .. toctree::
    :maxdepth: 2
 
@@ -40,7 +38,7 @@ Usage
 
 .. class:: Connection
 
-   A connection represents a persistent QuickBase connection.
+   A :class:`Connection` represents a persistent QuickBase connection.
 
    .. method:: do_query(dbid, [query=None, clist=None,
                slist=None, options={}, raw=False, fmt=None]):
@@ -191,6 +189,25 @@ Usage
       dicts. If *raw* is ``True``, then the raw XML node tree of the
       reponse will be returned instead.
       :meth:`Connection.edit_record()`.
+
+.. class:: QuickBaseRecord
+
+   A :class:`QuickBaseRecord` represents a single QuickBase record.
+   It's a dict-like object which allows accessing fields as both items
+   and attributes, although it doesn't implement :meth:`iterkeys()`.
+   Each QuickBase field is accessible with its field label,
+   e.g. ``record.record_id_`` or ``record['record_id_']`` will both be
+   the 'Record Id#' field.  There is also a special field _fields,
+   which records the record's data.
+
+   .. warning::
+
+      QuickBase allows the definition of multiple fields with
+      different names but the same label, e.g. two fields named
+      :samp:`foo+` and :samp:`foo*` will have the same label :samp:`foo_`.
+      :class:`QuickBaseRecord` does not support this.  A future
+      enhancement should allow accessing fields by name as well as
+      label using the dict-like syntax.
 
    .. method:: get_schema(dbid, [raw=False]):
 
