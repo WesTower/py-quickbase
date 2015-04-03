@@ -54,9 +54,11 @@ Usage
       requests.
 
       *dbid*
+      
          The QuickBase database ID.
 
       *query*
+      
          The QuickBase query to execute With no *query*,
          :meth:`Connection.do_query()` will return all records in
          *dbid*.
@@ -66,11 +68,13 @@ Usage
          e.g. ``"{'7'.EX.'Foobar'}"``.
 
       *clist*
+      
          A QuickBase clist, i.e. a dot-delimited list of field IDs,
          e.g. ``'3.7.42'``.  *slist* is similar, but indicates the
          fields to sort by.
 
       *options*
+      
          A dict representing the appropriate QuickBase options to
          pass; it is turned into a QuickBase option string via an
          arcane process (which is ripe for fixing).  If either
@@ -81,6 +85,7 @@ Usage
          hyphen-separated pairs.
 
       *raw*
+      
          If ``True``, then :meth:`Connection.do_query()` returns the
          complete XML node structure as parsed by BeautifulSoup from
          the QuickBase response.  One should not normally need to do
@@ -156,17 +161,21 @@ Usage
       number; YMMV.
 
       *csv_file*
+      
          An open file-like object to be passed to :func:`csv.reader()`.
 
       *clist*
+      
          A standard QuickBase column list, used to indicate which
          fields are to be imported.
 
       *encoding*
+      
          A Python encoding string (e.g. 'utf-8') used to decode the
          data after it's read in by :meth:`csv.reader.readlines()`.
 
       *skipfirst*
+      
          Whether the first row of data in the CSV file should be
          skipped.  Should be set to ``False`` if one's CSV doesn't
          have a header line.
@@ -194,25 +203,29 @@ Usage
 
       Execute `API_GetSchema
       <http://www.quickbase.com/api-guide/index.html#getschema.html>`_,
-      returning a :class:`TableInfo` object associated with your *dbid*.
-      :meth:`get_schema()` can be given a *dbid* pointing to
-      a single table or a full app. If the *dbid* passed is a table, the
-      response will contain a list of fields, among other info. If the
-      *dbid* passed is an app, the response will contain a list of chdbids (child dbids),
-      but will not be useful as a :class:`TableInfo` object, and thus
-      must be given  *raw* = ``True`` if the intent is to access the chdbid info.
+      returning a :class:`TableInfo` object associated with QuickBase
+      table *dbid*.  :meth:`Connection.get_schema()` can be given a
+      *dbid* pointing to a single table or a full app. If the *dbid*
+      passed is a table, the response will contain a list of fields,
+      among other info. If the *dbid* passed is an app, the response
+      will contain a list of chdbids (child dbids), but will not be
+      useful as a :class:`TableInfo` object, and thus must be given
+      *raw* = ``True`` if the intent is to access the chdbid info.
 
       *dbid*
-         The QuickBase database ID..
+      
+         The QuickBase database ID.
 
       *raw*
-         If ``True``, then :meth:`get_schema()` returns the
+      
+         If ``True``, then :meth:`Connection.get_schema()` returns the
          complete XML node structure as parsed by BeautifulSoup from
          the QuickBase response.
 
 .. class:: TableInfo
 
-   A representation of the quickbase table that makes schema data easily accessible.
+   A representation of the QuickBase table that makes schema data
+   easily accessible.
 
 .. class:: QuickBaseRecord
 
