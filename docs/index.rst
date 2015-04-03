@@ -199,6 +199,22 @@ Usage
       reponse will be returned instead.
       :meth:`Connection.edit_record()`.
 
+   .. method:: add_user_to_role(dbid, userid, roleid):
+
+      Execute `API_AddUserToRole
+      <http://www.quickbase.com/api-guide/index.html#add_user_to_role.html>`_
+      to add a user with ID *userid* to the role with ID *roleid* for
+      the Quickbase application identified by *dbid*.
+      :meth:`Connection.add_user_to_role()`.
+
+   .. method:: remove_user_from_role(dbid, userid, roleid):
+
+      Execute `API_RemoveUserFromRole
+      <http://www.quickbase.com/api-guide/index.html#removeuserfromrole.html>`_
+      to remove a user with ID *userid* from the role with ID *roleid* for
+      the Quickbase application identified by *dbid*.
+      :meth:`Connection.remove_user_to_role()`.
+
    .. method:: get_schema(dbid, [raw=False]):
 
       Execute `API_GetSchema
