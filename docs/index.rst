@@ -71,8 +71,18 @@ Usage
       the complete XML node structure as parsed by BeautifulSoup from
       the QuickBase response.
 
-.. class:: File
+.. class:: File(filename, data)
 
+   Files have to be uploaded to QuickBase specially.  The path of least
+   resistance was create a special class whose instance are recognized
+   by :meth:`Connection:add_record()` and
+   :meth:`Connection:edit_record()`.  Use by attaching it as one of
+   the values in an add or edit dict.
+
+   *filename* is the filename as it will appear in QuickBase.
+
+   *data* is a string containing the contents of the file, as they
+   will be uploaded to QuickBase.
 
 Indices and tables
 ==================
