@@ -122,6 +122,15 @@ Usage
       a dict in the same format as *record* as for
       :meth:`Connection.edit_record()`.
 
+   .. method:: delete_record(dbid, record_id, raw=False):
+
+      Execute `API_DeleteRecord
+      <http://www.quickbase.com/api-guide/index.html#delete_record.html>`_
+      to delete record ID *record_id* from QuickBase table *dbid*,
+      returning the record ID of the deleted record, unless *raw* is
+      ``True``, in which case the raw XML node tree of the response
+      will be returned instead.
+
    .. method:: run_import(dbid, import_id, raw=False):
 
       Execute `API_RunImport
@@ -131,24 +140,6 @@ Usage
       ``True``, in which case the raw XML node tree of the response
       will be returned instead.
       :meth:`Connection.run_import()`.
-
-   .. method:: download(dbid, rid, fid, vid="0"):
-
-      http://quickbase.intuit.com/developer/articles/downloading-files>`_
-      to download an attached file in the Quickbase table identified
-      by *dbid*, for the record ID *rid*, field ID *fid* and verion
-      ID *vid*, where the default version ID of "0" downloads the
-      latest version.
-      :meth:`Connection.download()`.
-
-   .. method:: delete_record(dbid, record_id, raw=False):
-
-      Execute `API_DeleteRecord
-      <http://www.quickbase.com/api-guide/index.html#delete_record.html>`_
-      to delete record ID *record_id* from QuickBase table *dbid*,
-      returning the record ID of the deleted record, unless *raw* is
-      ``True``, in which case the raw XML node tree of the response
-      will be returned instead.
 
    .. method:: import_from_csv(dbid, csv_file, clist, encoding='utf-8', skipfirst=True, raw=False, split=5000):
 
@@ -181,6 +172,15 @@ Usage
          Whether the first row of data in the CSV file should be
          skipped.  Should be set to ``False`` if one's CSV doesn't
          have a header line.
+
+   .. method:: download(dbid, rid, fid, vid="0"):
+
+      http://quickbase.intuit.com/developer/articles/downloading-files>`_
+      to download an attached file in the Quickbase table identified
+      by *dbid*, for the record ID *rid*, field ID *fid* and verion
+      ID *vid*, where the default version ID of "0" downloads the
+      latest version.
+      :meth:`Connection.download()`.
 
 .. class:: File(filename, data)
 
