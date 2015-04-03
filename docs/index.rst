@@ -97,17 +97,17 @@ Usage
       which would be returned by *query*.  If *raw* is ``True``, then the
       raw XML node tree of the response will be returned instead.
 
-   .. method:: add_record(dbid, record, raw=False):
+   .. method:: add_record(dbid, record, raw=false):
 
-      Execute `API_AddRecord
+      execute `api_addrecord
       <http://www.quickbase.com/api-guide/index.html#add_record.html>`_
-      to add a new record to the QuickBase table identified by *dbid*,
-      returning a tuple containing the record ID and update ID of the
-      new record, unless *raw* is ``True``, in which case the raw XML
+      to add a new record to the quickbase table identified by *dbid*,
+      returning a tuple containing the record id and update id of the
+      new record, unless *raw* is ``true``, in which case the raw xml
       node tree of the response will be returned instead.
 
-      *record* is a dict.  The keys are either integer field IDs or
-      string field names.  The values are either string data or
+      *record* is a dict.  the keys are either integer field ids or
+      string field names.  the values are either string data or
       :class:`File` instances.
 
    .. method:: edit_record(dbid, record_id, values, raw=False):
@@ -181,6 +181,16 @@ Usage
       ID *vid*, where the default version ID of "0" downloads the
       latest version.
       :meth:`Connection.download()`.
+
+   .. method:: user_roles(dbid, raw=False):
+
+      Execute `API_UserRoles
+      <http://www.quickbase.com/api-guide/index.html#userroles.html>`_
+      to request the list of users and their roles in the QuickBase
+      application identified by *dbid*, returning a list of users as
+      dicts. If *raw* is ``True``, then the raw XML node tree of the
+      reponse will be returned instead.
+      :meth:`Connection.edit_record()`.
 
 .. class:: File(filename, data)
 
