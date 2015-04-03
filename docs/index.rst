@@ -98,10 +98,27 @@ Usage
    .. method:: add_record(dbid, record, raw=False):
 
       Execute `API_AddRecord
-      <http://www.quickbase.com/api-guide/index.html#add_record.html>`_,
+      <http://www.quickbase.com/api-guide/index.html#add_record.html>`_
+      to add a new record to the QuickBase table identified by *dbid*,
       returning a tuple containing the record ID and update ID of the
       new record, unless *raw* is ``True``, in which case the raw XML
       node tree of the response will be returned instead.
+
+      *record* is a dict.  The keys are either integer field IDs or
+      string field names.  The values are either string data or
+      :class:`File` instances.
+
+   .. method:: edit_record(dbid, record_id, values, raw=False):
+
+      Execute `API_EditRecord
+      <http://www.quickbase.com/api-guide/index.html#edit_record.html>`_
+      to edit an existing record with the record ID *record_id* in the
+      QuickBase table identified by *dbid*, returning a tuple
+      containing the number of fields changed and the new update ID of
+      the record, unless *raw* is ``True``, in which case the raw XML
+      node tree of the response will be returned instead.  *values* is
+      a dict in the same format as *record* as for
+      :meth:`Connection.add_record()`.
 
 .. class:: File(filename, data)
 
