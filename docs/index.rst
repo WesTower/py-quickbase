@@ -83,7 +83,7 @@ Usage
          hyphen-separated pairs.
 
       *raw*
-         If true, then :meth:`Connection.do_query()` returns the
+         If ``True``, then :meth:`Connection.do_query()` returns the
          complete XML node structure as parsed by BeautifulSoup from
          the QuickBase response.
 
@@ -92,8 +92,16 @@ Usage
       Execute `API_DoQueryCount
       <http://www.quickbase.com/api-guide/index.html#do_query_count.html>`_,
       by default returning an integer indicating the number of records
-      which would be returned by *query*.  If *raw* is true, then the
-      raw node tree will be returned instead.
+      which would be returned by *query*.  If *raw* is ``True``, then the
+      raw XML node tree of the response will be returned instead.
+
+   .. method:: add_record(dbid, record, raw=False):
+
+      Execute `API_AddRecord
+      <http://www.quickbase.com/api-guide/index.html#add_record.html>`_,
+      returning a tuple containing the record ID and update ID of the
+      new record, unless *raw* is ``True``, in which case the raw XML
+      node tree of the response will be returned instead.
 
 .. class:: File(filename, data)
 
